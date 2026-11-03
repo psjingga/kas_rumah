@@ -16,7 +16,14 @@ class MonthlyTrendChart extends StatelessWidget {
     required this.trend,
     required this.selectedMonth,
     required this.onSelectMonth,
+    this.title = 'Tren 6 Bulan',
+    this.action,
   });
+
+  final String title;
+
+  /// Tombol opsional di kanan judul (mis. "Laporan").
+  final Widget? action;
 
   final List<MonthTotals> trend;
   final DateTime selectedMonth;
@@ -39,14 +46,17 @@ class MonthlyTrendChart extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    'Tren 6 Bulan',
-                    style: theme.textTheme.titleMedium,
-                  ),
+                  child: Text(title, style: theme.textTheme.titleMedium),
                 ),
-                const _Legend(color: _incomeColor, label: 'Masuk'),
-                const SizedBox(width: 12),
-                const _Legend(color: _expenseColor, label: 'Keluar'),
+                ?action,
+              ],
+            ),
+            const SizedBox(height: 4),
+            const Row(
+              children: [
+                _Legend(color: _incomeColor, label: 'Masuk'),
+                SizedBox(width: 12),
+                _Legend(color: _expenseColor, label: 'Keluar'),
               ],
             ),
             const SizedBox(height: 16),

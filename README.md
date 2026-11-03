@@ -33,6 +33,7 @@
   - [Dompet & transfer](#12-dompet--transfer)
   - [Utang & piutang](#13-utang--piutang)
   - [Catatan & foto struk](#14-catatan--foto-struk)
+  - [Laporan](#15-laporan)
 - [Alur penggunaan](#alur-penggunaan)
 - [Arsitektur](#arsitektur)
 - [Struktur folder](#struktur-folder)
@@ -196,6 +197,10 @@ Untuk pemasukan atau pengeluaran berulang, seperti gaji, listrik, internet, SPP,
 
 Menu ini ada di *Lainnya → Backup & Ekspor*.
 
+- **Kunci dengan kata sandi (disarankan):** saat membuat backup, isi kata sandi (min. 6 karakter, diketik dua kali).
+  - File dienkripsi **AES-256-GCM** dengan kunci dari **PBKDF2-HMAC-SHA256** (150.000 iterasi, salt acak).
+  - Saat memulihkan, aplikasi meminta kata sandi. Kata sandi salah atau file yang diubah ditolak.
+  - **Kata sandi tidak bisa dipulihkan bila lupa.**
 - **Buat backup & bagikan:** satu file `kas-rumah-backup-YYYY-MM-DD.json` berisi **semua data**:
   - transaksi dan transaksi rutin;
   - dompet dan transfer;
@@ -293,6 +298,25 @@ Dibuka lewat *Lainnya → Utang & Piutang*, atau kartu di Ringkasan bila ada yan
 - Foto yang tidak lagi dipakai (transaksi dihapus, atau form dibatalkan setelah memotret) dibersihkan otomatis saat aplikasi dibuka.
 - **Foto struk tidak ikut file backup**, karena file backup berupa teks. Catatan tetap ikut.
 
+### 15. Laporan
+
+Dibuka lewat *Lainnya → Laporan*, atau tombol **Laporan** di kartu Tren pada Ringkasan.
+
+- **Tahunan:** pilih tahun, lalu lihat:
+  - total pemasukan, pengeluaran, dan sisa setahun;
+  - **rasio menabung** (persen pemasukan yang tersisa);
+  - **rata-rata pengeluaran per bulan**, dihitung dari bulan yang ada datanya;
+  - **bulan paling boros**;
+  - grafik 12 bulan, tabel per bulan, dan pengeluaran per kategori setahun.
+
+  Ketuk bulan di tabel atau grafik untuk membukanya di Ringkasan.
+- **Bandingkan:** pilih dua bulan (awalnya bulan lalu vs bulan ini).
+  - Tampil pemasukan, pengeluaran, dan sisa, beserta pengeluaran per kategori.
+  - Perubahan ditandai ▲/▼: merah bila lebih buruk, hijau bila lebih baik, dan *"baru"* bila bulan pertama belum ada.
+- **Bulanan:** kartu laporan berisi ringkasan, kategori, dan 5 pengeluaran terbesar. Bisa dibagikan sebagai:
+  - **Gambar (PNG)**, cocok untuk WhatsApp;
+  - **PDF A4**, berisi ringkasan, bar kategori, dan tabel **semua transaksi** (tanggal, judul + catatan, kategori, dompet, nominal) dengan nomor halaman. Siap dicetak.
+
 ## Alur penggunaan
 
 ```
@@ -386,7 +410,8 @@ lib/
     ├── goals/                      # target tabungan
     ├── wallets/                    # dompet, transfer, penyesuaian saldo
     ├── debts/                      # utang & piutang
-    ├── backup/                     # backup JSON, pulihkan, ekspor CSV
+    ├── reports/                    # laporan tahunan, bandingkan bulan, PDF/gambar
+    ├── backup/                     # backup JSON (opsional terenkripsi), pulihkan, ekspor CSV
     └── settings/                   # tema, kunci PIN/biometrik, tab Lainnya
 
 test/                               # unit & widget test (repository di memori, jam tetap)
@@ -438,6 +463,8 @@ assets/fonts/                       # Plus Jakarta Sans + lisensi OFL
 | Backup & ekspor | `share_plus`, `file_picker`, `path_provider` |
 | Foto struk | `image_picker` |
 | Kunci aplikasi | `crypto` (SHA-256), `local_auth` (biometrik) |
+| Backup terenkripsi | `cryptography` (PBKDF2 + AES-GCM) |
+| Laporan PDF | `pdf` |
 | Ikon aplikasi | `flutter_launcher_icons` (dev) |
 
 ---
@@ -474,7 +501,7 @@ fvm flutter analyze
 fvm flutter test
 ```
 
-Ada **92 tes**, mencakup:
+Ada **101 tes**, mencakup:
 
 - **Unit:**
   - ringkasan, saldo, dan tren;
@@ -503,7 +530,8 @@ Ada **92 tes**, mencakup:
   - dompet: saldo, transfer, penyesuaian, arsip, filter, adapter, backup v2/v1, dan alur UI;
   - rutin mingguan, tahunan, dan cicilan, beserta pengingatnya;
   - utang-piutang (efek ke dompet, pelunasan, pengingat, backup);
-  - catatan, foto struk, dan pembersihan foto yatim.
+  - catatan, foto struk, dan pembersihan foto yatim;
+  - laporan tahunan, perbandingan bulan, PDF, backup terenkripsi (kata sandi salah / file diubah), dan UI laporan.
 
 Tes memakai repository di memori dan **jam tetap** (`3 Nov 2026 09.00`), sehingga hasilnya sama kapan pun dijalankan.
 
@@ -537,7 +565,7 @@ Tanpa `key.properties`, build release memakai kunci debug. Ini hanya cocok untuk
 - **Tanpa akun dan tanpa server.** Semua data tersimpan lokal di HP (Hive).
 - **Tidak ada fitur online**: tanpa analytics, iklan, atau pelacakan; data tidak dikirim ke mana pun.
 - **PIN** hanya disimpan sebagai hash SHA-256 + salt acak.
-- **File backup berisi data keuangan dalam bentuk teks (JSON).** Simpan di tempat yang aman, seperti Drive pribadi.
+- **File backup bisa dikunci kata sandi** (AES-256-GCM). Backup tanpa kata sandi berupa teks biasa, jadi simpan di tempat yang aman.
 - **Layar kunci** menutupi seluruh aplikasi, termasuk dialog, dan menyembunyikan isinya dari pembaca layar saat terkunci.
 
 ---
@@ -545,7 +573,7 @@ Tanpa `key.properties`, build release memakai kunci debug. Ini hanya cocok untuk
 ## Batasan yang diketahui
 
 - Data hanya ada di satu HP. Belum ada sinkronisasi antar-anggota keluarga.
-- File backup belum dienkripsi.
+- Backup tanpa kata sandi tetap tersedia, dan berupa teks biasa (JSON).
 - Riwayat Notifikasi disusun dari jadwal. Bila izin notifikasi mati, pengingat tidak dicatat. Namun notifikasi yang ditutup tanpa dibuka tetap tercatat sebagai "terkirim".
 - Pengingat bisa terlambat beberapa menit karena memakai jadwal *inexact*.
 - Nominal dalam Rupiah bulat (tanpa desimal) dan hanya mata uang Rupiah.
@@ -554,11 +582,10 @@ Tanpa `key.properties`, build release memakai kunci debug. Ini hanya cocok untuk
 
 ## Rencana pengembangan
 
-- [ ] Enkripsi file backup dengan kata sandi
 - [ ] Backup otomatis terjadwal ke Google Drive
 - [ ] Widget layar utama (sisa saldo & tombol tambah cepat)
 - [ ] Sinkronisasi antar-anggota keluarga
-- [ ] Laporan PDF bulanan
+- [ ] Baca struk otomatis (OCR offline dengan ML Kit)
 
 ---
 

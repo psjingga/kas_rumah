@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../../../reports/presentation/pages/reports_page.dart';
 import '../../../wallets/presentation/providers/wallet_providers.dart';
 import '../../../debts/presentation/pages/debt_pages.dart';
 import '../../../wallets/presentation/pages/wallet_pages.dart';
@@ -136,6 +137,13 @@ class SummaryTab extends ConsumerWidget {
             trend: ref.watch(monthlyTrendProvider),
             selectedMonth: month,
             onSelectMonth: monthNotifier.select,
+            action: TextButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const ReportsPage()),
+              ),
+              icon: const Icon(Icons.insights_outlined, size: 18),
+              label: const Text('Laporan'),
+            ),
           ),
         ],
       ),

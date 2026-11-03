@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../reports/presentation/pages/reports_page.dart';
 import '../../../debts/presentation/pages/debt_pages.dart';
 import '../../../wallets/presentation/pages/wallet_pages.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,6 +33,12 @@ class MoreTab extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.only(bottom: 24),
       children: [
+        ListTile(
+          leading: const Icon(Icons.insights_outlined),
+          title: const Text('Laporan'),
+          subtitle: const Text('Tahunan, bandingkan bulan, PDF/gambar'),
+          onTap: () => _push(context, const ReportsPage()),
+        ),
         ListTile(
           leading: const Icon(Icons.account_balance_wallet_outlined),
           title: const Text('Dompet'),

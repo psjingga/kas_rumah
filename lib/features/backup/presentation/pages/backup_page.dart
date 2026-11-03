@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../../data/backup_crypto.dart';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
@@ -51,23 +52,74 @@ class _BackupPageState extends ConsumerState<BackupPage> {
   String get _stamp =>
       DateFormat('yyyy-MM-dd').format(ref.read(clockProvider)());
 
-  Future<void> _backup() => _run(() async {
-    final json = ref
-        .read(backupServiceProvider)
-        .exportJson(ref.read(clockProvider)());
-    await _shareFile(
-      'kas-rumah-backup-$_stamp.json',
-      json,
-      'Backup Kas Rumah $_stamp',
+  Future<void> _backup() async {
+    // null = batal, '' = tanpa kata sandi.
+    final password = await showDialog<String>(
+      context: context,
+      builder: (_) => const _NewPasswordDialog(),
     );
-    await ref.read(lastBackupProvider.notifier).markNow();
-  });
+    if (password == null) return;
+    await _run(() async {
+      var json = ref
+          .read(backupServiceProvider)
+          .exportJson(ref.read(clockProvider)());
+      final locked = password.isNotEmpty;
+      if (locked) json = await const BackupCrypto().encrypt(json, password);
+      await _shareFile(
+        'kas-rumah-backup-$_stamp${locked ? '-terkunci' : ''}.json',
+        json,
+        'Backup Kas Rumah $_stamp${locked ? ' (terkunci kata sandi)' : ''}',
+      );
+      await ref.read(lastBackupProvider.notifier).markNow();
+    });
+  }
+
+  /// Minta kata sandi untuk membuka backup terenkripsi.
+  Future<String?> _askPassword() {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Backup terkunci'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          obscureText: true,
+          decoration: const InputDecoration(labelText: 'Kata sandi backup'),
+          onSubmitted: (v) => Navigator.pop(ctx, v),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, controller.text),
+            child: const Text('Buka'),
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<void> _restore() => _run(() async {
     final files = await FilePicker.pickFiles(dialogTitle: 'Pilih file backup');
     if (files.isEmpty) return;
-    final json = utf8.decode(await files.first.readAsBytes());
+    var json = utf8.decode(await files.first.readAsBytes());
     final service = ref.read(backupServiceProvider);
+
+    // Backup terenkripsi → minta kata sandi dulu.
+    if (BackupCrypto.isEncrypted(json)) {
+      if (!mounted) return;
+      final password = await _askPassword();
+      if (password == null || password.isEmpty) return;
+      try {
+        json = await const BackupCrypto().decrypt(json, password);
+      } on WrongPasswordException catch (e) {
+        if (mounted) showAppSnack(context, e.toString());
+        return;
+      }
+    }
 
     final BackupSummary summary;
     try {
@@ -193,6 +245,89 @@ class _BackupPageState extends ConsumerState<BackupPage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Dialog kata sandi backup baru (ketik dua kali). Mengembalikan kata sandi,
+/// `''` untuk backup tanpa kata sandi, atau `null` bila batal.
+class _NewPasswordDialog extends StatefulWidget {
+  const _NewPasswordDialog();
+
+  @override
+  State<_NewPasswordDialog> createState() => _NewPasswordDialogState();
+}
+
+class _NewPasswordDialogState extends State<_NewPasswordDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _password = TextEditingController();
+  final _confirm = TextEditingController();
+  var _hidden = true;
+
+  @override
+  void dispose() {
+    _password.dispose();
+    _confirm.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Kunci backup dengan kata sandi?'),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Disarankan bila file disimpan di Drive atau dikirim lewat '
+              'WhatsApp. Kata sandi TIDAK bisa dipulihkan bila lupa.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _password,
+              obscureText: _hidden,
+              decoration: InputDecoration(
+                labelText: 'Kata sandi (min. 6 karakter)',
+                suffixIcon: IconButton(
+                  tooltip: _hidden ? 'Tampilkan' : 'Sembunyikan',
+                  icon: Icon(
+                    _hidden ? Icons.visibility_outlined : Icons.visibility_off,
+                  ),
+                  onPressed: () => setState(() => _hidden = !_hidden),
+                ),
+              ),
+              validator: (v) =>
+                  (v ?? '').length < 6 ? 'Minimal 6 karakter' : null,
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _confirm,
+              obscureText: _hidden,
+              decoration: const InputDecoration(labelText: 'Ulangi kata sandi'),
+              validator: (v) =>
+                  v != _password.text ? 'Kata sandi tidak sama' : null,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, ''),
+          child: const Text('Tanpa sandi'),
+        ),
+        FilledButton(
+          onPressed: () {
+            if (_formKey.currentState!.validate()) {
+              Navigator.pop(context, _password.text);
+            }
+          },
+          child: const Text('Kunci & bagikan'),
+        ),
+      ],
     );
   }
 }
