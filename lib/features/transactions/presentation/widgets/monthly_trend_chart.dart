@@ -1,11 +1,12 @@
 import 'package:fl_chart/fl_chart.dart';
+import '../../../../core/theme/money_colors.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/utils/formatters.dart';
 import '../providers/transaction_providers.dart';
 
-const _incomeColor = Color(0xFF2E7D32);
-const _expenseColor = Color(0xFFE53935);
+const _incomeColor = ChartColors.income;
+const _expenseColor = ChartColors.expense;
 
 /// Bar chart pemasukan (hijau) & pengeluaran (merah) 6 bulan terakhir.
 /// Tahan batang untuk melihat nominal; ketuk untuk pindah ke bulan itu.

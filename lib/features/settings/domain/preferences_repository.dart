@@ -10,4 +10,9 @@ abstract interface class PreferencesRepository {
   DateTime? get lastBackupAt;
 
   Future<void> setLastBackupAt(DateTime time);
+
+  /// Halaman pembuka sudah dilewati/diselesaikan.
+  bool get onboardingDone;
+
+  Future<void> setOnboardingDone();
 }

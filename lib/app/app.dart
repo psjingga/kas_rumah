@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/settings/presentation/pages/app_lock.dart';
+import '../features/settings/presentation/pages/onboarding_page.dart';
 import '../features/settings/presentation/providers/settings_providers.dart';
 import 'home_shell.dart';
 
@@ -14,6 +15,7 @@ const _seed = Color(0xFF00796B);
 
 ThemeData _theme(Brightness brightness) => ThemeData(
   colorScheme: ColorScheme.fromSeed(seedColor: _seed, brightness: brightness),
+  fontFamily: 'PlusJakartaSans',
   inputDecorationTheme: const InputDecorationTheme(
     border: OutlineInputBorder(),
   ),
@@ -38,7 +40,10 @@ class KeuanganApp extends ConsumerWidget {
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       // Layar kunci PIN menutupi seluruh halaman (termasuk dialog).
       builder: (context, child) => AppLockGate(child: child!),
-      home: const HomeShell(),
+      // Halaman pembuka sekali saja untuk pengguna baru.
+      home: ref.watch(onboardingDoneProvider)
+          ? const HomeShell()
+          : const OnboardingPage(),
     );
   }
 }

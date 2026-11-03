@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/money_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/formatters.dart';
@@ -157,8 +158,8 @@ class GoalDetailPage extends ConsumerWidget {
                 leading: Icon(
                   d.isWithdrawal ? Icons.north_east : Icons.south_west,
                   color: d.isWithdrawal
-                      ? const Color(0xFFE53935)
-                      : const Color(0xFF2E7D32),
+                      ? context.expenseColor
+                      : context.incomeColor,
                 ),
                 title: Text(d.isWithdrawal ? 'Tarik' : 'Setor'),
                 subtitle: Text(

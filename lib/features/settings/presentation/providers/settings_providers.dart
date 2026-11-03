@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../transactions/presentation/providers/recurring_providers.dart';
 import '../../../transactions/presentation/providers/transaction_providers.dart';
 import '../../domain/preferences_repository.dart';
 import '../../domain/security.dart';
@@ -33,6 +34,12 @@ final lastBackupProvider = NotifierProvider<LastBackupNotifier, DateTime?>(
   LastBackupNotifier.new,
 );
 
+/// `false` = tampilkan halaman pembuka. Pengguna yang sudah punya data
+/// (versi sebelum ada halaman pembuka) dianggap sudah selesai.
+final onboardingDoneProvider = NotifierProvider<OnboardingNotifier, bool>(
+  OnboardingNotifier.new,
+);
+
 /// Pengaturan kunci aplikasi (PIN & biometrik).
 final securityProvider = NotifierProvider<SecurityNotifier, SecuritySettings>(
   SecurityNotifier.new,
@@ -50,6 +57,19 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
   Future<void> set(ThemeMode mode) async {
     await ref.read(preferencesRepositoryProvider).setThemeMode(mode);
     state = mode;
+  }
+}
+
+class OnboardingNotifier extends Notifier<bool> {
+  @override
+  bool build() =>
+      ref.read(preferencesRepositoryProvider).onboardingDone ||
+      ref.read(transactionRepositoryProvider).getAll().isNotEmpty ||
+      ref.read(recurringRepositoryProvider).getAll().isNotEmpty;
+
+  Future<void> complete() async {
+    await ref.read(preferencesRepositoryProvider).setOnboardingDone();
+    state = true;
   }
 }
 

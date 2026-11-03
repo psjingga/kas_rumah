@@ -59,6 +59,24 @@ final financeSummaryProvider = Provider<FinanceSummary>(
   ),
 );
 
+/// Saran judul untuk form: judul unik dari riwayat (terbaru dulu) beserta
+/// kategori & nominal terakhirnya, mis. "Bensin · Transportasi · 20.000".
+typedef TitleSuggestion = ({
+  String title,
+  TransactionCategory category,
+  double amount,
+});
+
+final titleSuggestionsProvider =
+    Provider.family<List<TitleSuggestion>, TransactionType>((ref, type) {
+      final seen = <String>{};
+      return [
+        for (final t in ref.watch(transactionsProvider))
+          if (t.type == type && seen.add(t.title.toLowerCase()))
+            (title: t.title, category: t.category, amount: t.amount),
+      ];
+    });
+
 /// Total pemasukan & pengeluaran satu bulan, untuk grafik tren.
 typedef MonthTotals = ({DateTime month, double income, double expense});
 
@@ -85,6 +103,17 @@ final monthlyTrendProvider = Provider<List<MonthTotals>>((ref) {
         expense: expense[first.addMonths(i)] ?? 0,
       ),
   ];
+});
+
+/// Ringkasan bulan sebelum bulan terpilih, untuk perbandingan
+/// ("pengeluaran naik 12% dari bulan lalu").
+final previousMonthSummaryProvider = Provider<FinanceSummary>((ref) {
+  final previous = ref.watch(selectedMonthProvider).addMonths(-1);
+  return FinanceSummary.from(
+    ref
+        .watch(transactionsProvider)
+        .where((t) => t.date.isSameMonthAs(previous)),
+  );
 });
 
 /// Shortcut bila widget hanya butuh satu angka; widget tersebut tidak ikut

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/empty_state.dart';
+import '../../../../core/theme/money_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/formatters.dart';
@@ -19,13 +21,18 @@ class GoalsTab extends ConsumerWidget {
     final totalSaved = goals.fold(0.0, (s, g) => s + g.saved);
 
     if (goals.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Text(
-            'Belum ada target tabungan.\nKetuk "Target" untuk membuat, '
-            'mis. Dana darurat Rp 10.000.000.',
-            textAlign: TextAlign.center,
+      return Center(
+        child: SingleChildScrollView(
+          child: EmptyState(
+            icon: Icons.savings_outlined,
+            title: 'Belum ada target tabungan',
+            message:
+                'Tentukan tujuan seperti Dana darurat Rp 10.000.000, '
+                'lalu setor sedikit demi sedikit.',
+            actionLabel: 'Buat target',
+            onAction: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const GoalFormPage()),
+            ),
           ),
         ),
       );
@@ -110,11 +117,11 @@ class GoalCard extends StatelessWidget {
                     ),
                   ),
                   if (g.isReached)
-                    const Chip(
-                      label: Text('Tercapai'),
+                    Chip(
+                      label: const Text('Tercapai'),
                       avatar: Icon(
                         Icons.check_circle,
-                        color: Color(0xFF2E7D32),
+                        color: context.incomeColor,
                       ),
                       visualDensity: VisualDensity.compact,
                     )

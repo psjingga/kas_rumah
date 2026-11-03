@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/empty_state.dart';
+import '../../../../core/theme/money_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/formatters.dart';
@@ -9,15 +11,13 @@ import '../../../transactions/presentation/widgets/month_selector.dart';
 import '../../domain/budget.dart';
 import '../providers/budget_providers.dart';
 
-const _safeColor = Color(0xFF2E7D32);
-const _warningColor = Color(0xFFEF6C00);
-const _overColor = Color(0xFFE53935);
-
-Color budgetLevelColor(BudgetLevel level) => switch (level) {
-  BudgetLevel.safe => _safeColor,
-  BudgetLevel.warning => _warningColor,
-  BudgetLevel.over => _overColor,
-};
+/// Warna tingkat anggaran: hijau aman, oranye hampir habis, merah lewat.
+Color budgetLevelColor(BuildContext context, BudgetLevel level) =>
+    switch (level) {
+      BudgetLevel.safe => context.incomeColor,
+      BudgetLevel.warning => context.warningColor,
+      BudgetLevel.over => context.expenseColor,
+    };
 
 /// Tab Anggaran: batas pengeluaran per kategori dan pemakaiannya di bulan
 /// terpilih.
@@ -32,48 +32,53 @@ class BudgetsTab extends ConsumerWidget {
     final totalLimit = statuses.fold(0.0, (s, b) => s + b.limit);
     final totalSpent = statuses.fold(0.0, (s, b) => s + b.spent);
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
-      children: [
-        MonthSelector(
-          month: month,
-          isThisMonth: monthNotifier.isThisMonth,
-          onPrevious: monthNotifier.previous,
-          onNext: monthNotifier.next,
-          onThisMonth: monthNotifier.goToThisMonth,
-        ),
-        if (statuses.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 48, horizontal: 16),
-            child: Text(
-              'Belum ada anggaran.\nKetuk "Anggaran" untuk membatasi '
-              'pengeluaran per kategori setiap bulan, mis. Makanan '
-              'Rp 3.000.000.',
-              textAlign: TextAlign.center,
-            ),
-          )
-        else ...[
-          _TotalCard(limit: totalLimit, spent: totalSpent),
-          const SizedBox(height: 12),
-          Card(
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              children: [
-                for (final s in statuses)
-                  _BudgetTile(
-                    status: s,
-                    onTap: () => showBudgetLimitDialog(
-                      context,
-                      ref,
-                      s.category,
-                      current: s.limit,
-                    ),
-                  ),
-              ],
-            ),
+    return MonthSwipe(
+      onPrevious: monthNotifier.previous,
+      onNext: monthNotifier.next,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
+        children: [
+          MonthSelector(
+            month: month,
+            isThisMonth: monthNotifier.isThisMonth,
+            onPrevious: monthNotifier.previous,
+            onNext: monthNotifier.next,
+            onThisMonth: monthNotifier.goToThisMonth,
           ),
+          if (statuses.isEmpty)
+            EmptyState(
+              icon: Icons.pie_chart_outline,
+              title: 'Belum ada anggaran',
+              message:
+                  'Batasi pengeluaran per kategori setiap bulan, mis. '
+                  'Makanan Rp 3.000.000. Kamu akan diberi tahu saat '
+                  'hampir habis.',
+              actionLabel: 'Atur anggaran',
+              onAction: () => pickCategoryForBudget(context, ref),
+            )
+          else ...[
+            _TotalCard(limit: totalLimit, spent: totalSpent),
+            const SizedBox(height: 12),
+            Card(
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: [
+                  for (final s in statuses)
+                    _BudgetTile(
+                      status: s,
+                      onTap: () => showBudgetLimitDialog(
+                        context,
+                        ref,
+                        s.category,
+                        current: s.limit,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
@@ -87,7 +92,7 @@ class _TotalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ratio = limit == 0 ? 0.0 : spent / limit;
-    final color = budgetLevelColor(BudgetLevel.of(ratio));
+    final color = budgetLevelColor(context, BudgetLevel.of(ratio));
     final textTheme = Theme.of(context).textTheme;
     return Card(
       child: Padding(
@@ -136,7 +141,7 @@ class _BudgetTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = status;
-    final color = budgetLevelColor(s.level);
+    final color = budgetLevelColor(context, s.level);
     return InkWell(
       onTap: onTap,
       child: Padding(

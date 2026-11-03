@@ -175,9 +175,7 @@ class _Decoded {
       throw const FormatException('File bukan backup yang valid.');
     }
     if (root is! Map || root['app'] != BackupService._app) {
-      throw const FormatException(
-        'File ini bukan backup Kas Rumah.',
-      );
+      throw const FormatException('File ini bukan backup Kas Rumah.');
     }
     if ((root['version'] as int? ?? 0) > BackupService.formatVersion) {
       throw const FormatException(

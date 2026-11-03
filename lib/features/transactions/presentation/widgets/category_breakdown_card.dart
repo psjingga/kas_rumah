@@ -1,14 +1,23 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/money_colors.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../domain/entities/finance_summary.dart';
 
-/// Rincian pengeluaran per kategori: ikon, nominal, dan bar porsi.
+/// Rincian pengeluaran per kategori: ikon, nominal, bar porsi, dan
+/// perubahan dari bulan lalu (▲ naik merah, ▼ turun hijau).
 /// Urut dari pengeluaran terbesar; tidak tampil bila belum ada pengeluaran.
 class CategoryBreakdownCard extends StatelessWidget {
-  const CategoryBreakdownCard({super.key, required this.summary});
+  const CategoryBreakdownCard({
+    super.key,
+    required this.summary,
+    this.previous,
+  });
 
   final FinanceSummary summary;
+
+  /// Ringkasan bulan lalu untuk perbandingan per kategori.
+  final FinanceSummary? previous;
 
   @override
   Widget build(BuildContext context) {
@@ -52,6 +61,22 @@ class CategoryBreakdownCard extends StatelessWidget {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
+                              if (previous?.expenseByCategory[category]
+                                  case final before?)
+                                if (Fmt.change(before, amount) case final c?)
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 8),
+                                    child: Text(
+                                      c,
+                                      style: textTheme.labelSmall?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                        // Pengeluaran naik = buruk (merah).
+                                        color: amount > before
+                                            ? context.expenseColor
+                                            : context.incomeColor,
+                                      ),
+                                    ),
+                                  ),
                               Text(
                                 Fmt.rupiah(amount),
                                 style: const TextStyle(

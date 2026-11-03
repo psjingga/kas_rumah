@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../domain/entities/transaction.dart';
 import '../providers/category_providers.dart';
+import '../providers/transaction_providers.dart';
 
 /// Validator bersama untuk form transaksi & form transaksi rutin.
 abstract final class FormValidators {
@@ -73,6 +74,142 @@ class TitleField extends StatelessWidget {
   }
 }
 
+/// Field judul dengan saran dari riwayat: ketik "ben" → muncul "Bensin"
+/// (beserta kategori & nominal terakhir) untuk dipilih.
+class TitleAutocompleteField extends StatefulWidget {
+  const TitleAutocompleteField({
+    super.key,
+    required this.controller,
+    required this.suggestions,
+    required this.onSelected,
+  });
+
+  final TextEditingController controller;
+  final List<TitleSuggestion> suggestions;
+  final ValueChanged<TitleSuggestion> onSelected;
+
+  @override
+  State<TitleAutocompleteField> createState() => _TitleAutocompleteFieldState();
+}
+
+class _TitleAutocompleteFieldState extends State<TitleAutocompleteField> {
+  final _focus = FocusNode();
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
+
+  Iterable<TitleSuggestion> _options(TextEditingValue value) {
+    final q = value.text.trim().toLowerCase();
+    if (q.isEmpty) return const [];
+    return widget.suggestions
+        .where((s) {
+          final t = s.title.toLowerCase();
+          return t.contains(q) && t != q;
+        })
+        .take(5);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) => RawAutocomplete<TitleSuggestion>(
+        textEditingController: widget.controller,
+        focusNode: _focus,
+        displayStringForOption: (s) => s.title,
+        optionsBuilder: _options,
+        onSelected: widget.onSelected,
+        fieldViewBuilder: (context, controller, focus, onSubmitted) =>
+            TextFormField(
+              controller: controller,
+              focusNode: focus,
+              textInputAction: TextInputAction.next,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Judul / Deskripsi',
+                hintText: 'Mis. Belanja sayur',
+                prefixIcon: Icon(Icons.notes),
+              ),
+              validator: FormValidators.title,
+            ),
+        optionsViewBuilder: (context, onSelected, options) => Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 4,
+            borderRadius: BorderRadius.circular(12),
+            clipBehavior: Clip.antiAlias,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: constraints.maxWidth,
+                maxHeight: 280,
+              ),
+              child: ListView(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                children: [
+                  for (final s in options)
+                    ListTile(
+                      dense: true,
+                      leading: Icon(s.category.icon, color: s.category.color),
+                      title: Text(s.title),
+                      subtitle: Text(
+                        '${s.category.label} · ${Fmt.rupiah(s.amount)}',
+                      ),
+                      onTap: () => onSelected(s),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Tombol nominal cepat di bawah field nominal: setiap ketukan
+/// **menambahkan** nominal (50rb + 20rb = 70rb).
+class QuickAmountChips extends StatelessWidget {
+  const QuickAmountChips({super.key, required this.controller});
+
+  final TextEditingController controller;
+
+  static const _values = [10000, 20000, 50000, 100000, 500000];
+
+  void _add(int value) {
+    final current = Fmt.parseAmount(controller.text) ?? 0;
+    final text = Fmt.thousands(current + value);
+    controller.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      children: [
+        for (final v in _values)
+          ActionChip(
+            label: Text('+${v ~/ 1000}rb'),
+            visualDensity: VisualDensity.compact,
+            onPressed: () => _add(v),
+          ),
+        ActionChip(
+          avatar: const Icon(Icons.backspace_outlined, size: 16),
+          label: const Text('Hapus'),
+          visualDensity: VisualDensity.compact,
+          onPressed: controller.clear,
+        ),
+      ],
+    );
+  }
+}
+
 /// Field nominal: hanya digit, otomatis diberi titik ribuan.
 class AmountField extends StatelessWidget {
   const AmountField({
@@ -124,10 +261,8 @@ class CategoryField extends ConsumerWidget {
       key: ValueKey(type),
       initialValue: value,
       isExpanded: true,
-      decoration: const InputDecoration(
-        labelText: 'Kategori',
-        prefixIcon: Icon(Icons.category_outlined),
-      ),
+      // Tanpa prefixIcon: tiap pilihan sudah menampilkan ikon kategorinya.
+      decoration: const InputDecoration(labelText: 'Kategori'),
       items: [
         // Kategori yang sudah dihapus tetap ditampilkan untuk data lama.
         for (final c in [

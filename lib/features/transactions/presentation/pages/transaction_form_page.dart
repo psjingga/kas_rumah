@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/formatters.dart';
@@ -101,6 +104,15 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     _category = _firstCategory(type);
   });
 
+  /// Saran judul dipilih: pakai kategorinya, dan nominal terakhir bila
+  /// nominal belum diisi.
+  void _applySuggestion(TitleSuggestion s) => setState(() {
+    if (s.category.type == _type) _category = s.category;
+    if (_amountController.text.isEmpty) {
+      _amountController.text = Fmt.thousands(s.amount);
+    }
+  });
+
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -161,6 +173,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       if (_updateDefault && _linked != null) {
         await recurring.save(_linked.copyWith(amount: amount));
       }
+      unawaited(HapticFeedback.lightImpact());
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
@@ -193,7 +206,11 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
             ],
             TypeSelector(value: _type, onChanged: _changeType),
             const SizedBox(height: 20),
-            TitleField(controller: _titleController),
+            TitleAutocompleteField(
+              controller: _titleController,
+              suggestions: ref.watch(titleSuggestionsProvider(_type)),
+              onSelected: _applySuggestion,
+            ),
             const SizedBox(height: 16),
             AmountField(
               controller: _amountController,
@@ -202,6 +219,8 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                   : 'Nominal khusus bulan ini, default '
                         '${Fmt.rupiah(linked.amount)}',
             ),
+            const SizedBox(height: 8),
+            QuickAmountChips(controller: _amountController),
             const SizedBox(height: 16),
             CategoryField(
               type: _type,

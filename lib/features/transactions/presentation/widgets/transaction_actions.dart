@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/entities/recurring_transaction.dart';
@@ -57,6 +60,7 @@ Future<void> deleteTransactionWithUndo(
   final notifier = ref.read(transactionsProvider.notifier);
   final removed = await notifier.remove(transaction.id);
   if (removed == null || !context.mounted) return;
+  unawaited(HapticFeedback.mediumImpact());
 
   showAppSnack(
     context,

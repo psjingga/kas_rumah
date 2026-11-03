@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/empty_state.dart';
+import '../../../../core/theme/money_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/formatters.dart';
@@ -68,9 +70,14 @@ class RecurringPage extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           if (items.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 40),
-              child: Center(child: Text('Belum ada transaksi rutin.')),
+            EmptyState(
+              icon: Icons.event_repeat,
+              title: 'Belum ada transaksi rutin',
+              message:
+                  'Tambahkan gaji, listrik, internet, atau cicilan '
+                  'agar diingatkan setiap bulan.',
+              actionLabel: 'Tambah rutin',
+              onAction: () => _openForm(context, ref),
             )
           else ...[
             Card(
@@ -134,7 +141,6 @@ class _RecurringTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final r = recurring;
-    final scheme = Theme.of(context).colorScheme;
     return Opacity(
       opacity: r.active ? 1 : .5,
       child: ListTile(
@@ -154,7 +160,7 @@ class _RecurringTile extends StatelessWidget {
         trailing: Text(
           '${r.isIncome ? '+' : '−'} ${Fmt.rupiah(r.amount)}',
           style: TextStyle(
-            color: r.isIncome ? const Color(0xFF2E7D32) : scheme.error,
+            color: r.isIncome ? context.incomeColor : context.expenseColor,
             fontWeight: FontWeight.w600,
           ),
         ),

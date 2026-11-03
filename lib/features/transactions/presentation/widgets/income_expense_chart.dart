@@ -1,11 +1,12 @@
 import 'package:fl_chart/fl_chart.dart';
+import '../../../../core/theme/money_colors.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/utils/formatters.dart';
 import '../../domain/entities/finance_summary.dart';
 
-const _incomeColor = Color(0xFF2E7D32);
-const _expenseColor = Color(0xFFE53935);
+const _incomeColor = ChartColors.income;
+const _expenseColor = ChartColors.expense;
 
 /// Pie chart (donat) perbandingan pemasukan vs pengeluaran bulan terpilih.
 /// Bagian tengah menampilkan berapa persen pemasukan yang sudah terpakai.

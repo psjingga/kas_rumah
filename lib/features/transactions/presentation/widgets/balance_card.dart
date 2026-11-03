@@ -7,21 +7,24 @@ import '../../domain/entities/finance_summary.dart';
 /// sebagai keterangan (tidak ikut dijumlahkan), lalu pemasukan &
 /// pengeluaran.
 class BalanceCard extends StatelessWidget {
-  const BalanceCard({super.key, required this.summary});
+  const BalanceCard({super.key, required this.summary, this.previous});
 
   final FinanceSummary summary;
 
+  /// Ringkasan bulan lalu, untuk perbandingan pemasukan & pengeluaran.
+  final FinanceSummary? previous;
+
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final (background, foreground) = balanceCardColors(context);
     final negatif = summary.balance < 0;
     final muted = TextStyle(
-      color: scheme.onPrimary.withValues(alpha: .8),
+      color: foreground.withValues(alpha: .8),
       fontSize: 12.5,
     );
 
     return Card(
-      color: scheme.primary,
+      color: background,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -29,18 +32,25 @@ class BalanceCard extends StatelessWidget {
           children: [
             Text(
               'Sisa Saldo',
-              style: TextStyle(color: scheme.onPrimary.withValues(alpha: .8)),
+              style: TextStyle(color: foreground.withValues(alpha: .8)),
             ),
             const SizedBox(height: 4),
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
-              child: Text(
-                Fmt.rupiah(summary.balance),
-                style: TextStyle(
-                  color: negatif ? const Color(0xFFFFCDD2) : scheme.onPrimary,
-                  fontSize: 30,
-                  fontWeight: FontWeight.w700,
+              // Angka bergulir halus saat saldo berubah.
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(end: summary.balance),
+                duration: const Duration(milliseconds: 600),
+                curve: Curves.easeOutCubic,
+                builder: (context, value, _) => Text(
+                  Fmt.rupiah(value.roundToDouble()),
+                  style: TextStyle(
+                    color: negatif ? const Color(0xFFFFCDD2) : foreground,
+                    fontSize: 32,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -.5,
+                  ),
                 ),
               ),
             ),
@@ -51,24 +61,41 @@ class BalanceCard extends StatelessWidget {
               style: muted,
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _Total(
-                    label: 'Pemasukan',
-                    value: summary.totalIncome,
-                    icon: Icons.south_west,
+            // IntrinsicHeight: kedua kotak selalu sama tinggi.
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _Total(
+                      label: 'Pemasukan',
+                      value: summary.totalIncome,
+                      icon: Icons.south_west,
+                      change: previous == null
+                          ? null
+                          : Fmt.change(
+                              previous!.totalIncome,
+                              summary.totalIncome,
+                            ),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _Total(
-                    label: 'Pengeluaran',
-                    value: summary.totalExpense,
-                    icon: Icons.north_east,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _Total(
+                      label: 'Pengeluaran',
+                      value: summary.totalExpense,
+                      icon: Icons.north_east,
+                      change: previous == null
+                          ? null
+                          : Fmt.change(
+                                  previous!.totalExpense,
+                                  summary.totalExpense,
+                                ) ??
+                                '—',
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
@@ -77,16 +104,33 @@ class BalanceCard extends StatelessWidget {
   }
 }
 
+/// Warna kartu saldo: teal penuh di mode terang, teal tua di mode gelap
+/// (teal terang terlalu menyilaukan di layar gelap).
+(Color, Color) balanceCardColors(BuildContext context) {
+  final scheme = Theme.of(context).colorScheme;
+  return scheme.brightness == Brightness.dark
+      ? (scheme.primaryContainer, scheme.onPrimaryContainer)
+      : (scheme.primary, scheme.onPrimary);
+}
+
 class _Total extends StatelessWidget {
-  const _Total({required this.label, required this.value, required this.icon});
+  const _Total({
+    required this.label,
+    required this.value,
+    required this.icon,
+    this.change,
+  });
 
   final String label;
   final double value;
   final IconData icon;
 
+  /// Perubahan dari bulan lalu, mis. "▲12%".
+  final String? change;
+
   @override
   Widget build(BuildContext context) {
-    final onPrimary = Theme.of(context).colorScheme.onPrimary;
+    final onPrimary = balanceCardColors(context).$2;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -119,6 +163,14 @@ class _Total extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (change case final c?)
+                  Text(
+                    '$c vs bln lalu',
+                    style: TextStyle(
+                      color: onPrimary.withValues(alpha: .75),
+                      fontSize: 11,
+                    ),
+                  ),
               ],
             ),
           ),

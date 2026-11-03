@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/money_colors.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../domain/entities/transaction.dart';
 
@@ -10,17 +11,21 @@ class TransactionTile extends StatelessWidget {
     required this.transaction,
     required this.onTap,
     required this.onDelete,
+    this.showDate = true,
   });
 
   final Transaction transaction;
   final VoidCallback onTap;
   final VoidCallback onDelete;
 
+  /// `false` di riwayat yang sudah dikelompokkan per hari.
+  final bool showDate;
+
   @override
   Widget build(BuildContext context) {
     final t = transaction;
     final scheme = Theme.of(context).colorScheme;
-    final amountColor = t.isIncome ? const Color(0xFF2E7D32) : scheme.error;
+    final amountColor = t.isIncome ? context.incomeColor : context.expenseColor;
 
     return Dismissible(
       key: ValueKey(t.id),
@@ -48,7 +53,9 @@ class TransactionTile extends StatelessWidget {
             ],
             Flexible(
               child: Text(
-                '${t.category.label} · ${Fmt.date(t.date)}',
+                showDate
+                    ? '${t.category.label} · ${Fmt.date(t.date)}'
+                    : t.category.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),

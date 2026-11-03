@@ -29,6 +29,12 @@ class HivePreferencesRepository implements PreferencesRepository {
   @override
   Future<void> setLastBackupAt(DateTime time) =>
       _box.put('last_backup', time.millisecondsSinceEpoch);
+
+  @override
+  bool get onboardingDone => _box.get('onboarding_done') == true;
+
+  @override
+  Future<void> setOnboardingDone() => _box.put('onboarding_done', true);
 }
 
 /// Pengaturan keamanan di box `settings`.

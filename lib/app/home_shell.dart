@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/navigation/home_tab.dart';
 import '../features/budgets/presentation/pages/budgets_tab.dart';
 import '../features/goals/presentation/pages/goal_pages.dart';
 import '../features/goals/presentation/pages/goals_tab.dart';
@@ -31,7 +32,7 @@ typedef _Tab = ({
 });
 
 class _HomeShellState extends ConsumerState<HomeShell> {
-  var _index = 0;
+  int get _index => ref.watch(homeTabProvider).index;
 
   static const List<_Tab> _tabs = [
     (
@@ -135,7 +136,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
+        onDestinationSelected: (i) =>
+            ref.read(homeTabProvider.notifier).select(HomeTab.values[i]),
         destinations: [
           for (final t in _tabs)
             NavigationDestination(

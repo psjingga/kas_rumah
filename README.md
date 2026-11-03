@@ -29,6 +29,7 @@
   - [Backup, pulihkan & ekspor CSV](#8-backup-pulihkan--ekspor-csv)
   - [Kunci aplikasi (PIN & sidik jari)](#9-kunci-aplikasi-pin--sidik-jari)
   - [Tema terang / gelap](#10-tema-terang--gelap)
+  - [Halaman pembuka & tampilan kosong](#11-halaman-pembuka--tampilan-kosong)
 - [Alur penggunaan](#alur-penggunaan)
 - [Arsitektur](#arsitektur)
 - [Struktur folder](#struktur-folder)
@@ -74,19 +75,23 @@ Semua angka dihitung **per bulan**. Bulan dipilih dengan tombol `‹ November 20
 - **Kartu Sisa Saldo:** pemasukan − pengeluaran bulan terpilih.
   - Ada keterangan *"Sisa bulan lalu Rp …"* sebagai informasi.
   - Sisa bulan lalu **tidak dijumlahkan** ke saldo bulan ini.
+- **Perbandingan dengan bulan lalu:** misalnya *"▲12% vs bln lalu"* di bawah pemasukan dan pengeluaran.
+- **Kartu Anggaran & Tabungan:** status singkat (*"2 hampir habis"*, total tabungan). Ketuk untuk membuka tabnya.
 - **Kartu Rutin bulan ini:** daftar transaksi rutin yang belum dicatat. Lihat [Transaksi rutin](#3-transaksi-rutin-bulanan).
+- **Geser kiri/kanan** di Ringkasan dan Anggaran untuk pindah bulan.
+- **Angka sisa saldo beranimasi** saat berubah.
 - **Pie chart Pemasukan vs Pengeluaran:**
   - Bagian tengah menampilkan berapa persen pemasukan yang sudah terpakai.
   - Angkanya berubah merah bila pengeluaran melebihi pemasukan.
   - Irisan bisa diketuk untuk disorot.
-- **Pengeluaran per Kategori:** daftar kategori berbar warna dengan persentase dan nominal, urut dari yang terbesar.
+- **Pengeluaran per Kategori:** daftar kategori berbar warna dengan persentase, nominal, dan perubahan dari bulan lalu (▲ merah bila naik, ▼ hijau bila turun), urut dari yang terbesar.
 - **Tren 6 Bulan:** bar chart pemasukan (hijau) dan pengeluaran (merah) per bulan.
   - Tahan batang untuk melihat nominalnya.
   - Ketuk batang untuk pindah ke bulan itu.
 
 ### 2. Riwayat & pencarian
 
-- **Tab Riwayat:** semua transaksi bulan terpilih beserta total masuk dan keluar.
+- **Tab Riwayat:** transaksi bulan terpilih **dikelompokkan per hari** (*Hari ini*, *Kemarin*, *Senin, 2 Nov*), masing-masing dengan total bersih harian.
   - Ketuk transaksi untuk mengubah judul, nominal, kategori, atau tanggal.
   - Geser ke kiri untuk menghapus. Snackbar **"Urungkan"** muncul selama 5 detik.
 - **Pencarian (🔍):** mencari di **semua bulan**.
@@ -100,8 +105,8 @@ Semua angka dihitung **per bulan**. Bulan dipilih dengan tombol `‹ November 20
 | Kolom | Validasi |
 |---|---|
 | Jenis | Pengeluaran / Pemasukan; kategori ikut berganti |
-| Judul / Deskripsi | Wajib, maks. 60 karakter |
-| Nominal | Wajib, hanya angka, > 0, otomatis diberi titik ribuan |
+| Judul / Deskripsi | Wajib, maks. 60 karakter. **Saran dari riwayat**: ketik "ben", lalu pilih "Bensin" dan kategori serta nominal terakhirnya ikut terisi |
+| Nominal | Wajib, hanya angka, > 0, otomatis diberi titik ribuan. **Tombol cepat** +10rb, +20rb, +50rb, +100rb, +500rb (dijumlahkan) |
 | Kategori | Hanya kategori yang sesuai jenis (bawaan + buatan sendiri) |
 | Tanggal | Date picker berbahasa Indonesia |
 | *Ulangi tiap bulan* | Opsional: sekaligus membuat transaksi rutin |
@@ -205,7 +210,21 @@ Menu ini ada di *Lainnya → Backup & Ekspor*.
 
 ### 10. Tema terang / gelap
 
-Pilih **Sistem / Terang / Gelap** di tab Lainnya. Warna utama aplikasi adalah hijau-teal (`#00796B`).
+- Pilih **Sistem / Terang / Gelap** di tab Lainnya.
+- Warna utama aplikasi adalah hijau-teal (`#00796B`).
+- Font memakai **Plus Jakarta Sans** (OFL), disertakan di aplikasi sehingga tampil walau offline.
+- Warna pemasukan, pengeluaran, dan peringatan menyesuaikan mode gelap agar tetap kontras.
+
+### 11. Halaman pembuka & tampilan kosong
+
+- **Halaman pembuka (sekali saja untuk pengguna baru)**, 4 langkah dan semuanya boleh dilewati:
+  1. Perkenalan aplikasi.
+  2. Pemasukan rutin (gaji).
+  3. Tagihan bulanan, dipilih dari daftar cepat: Listrik, Air PDAM, Internet, Pulsa, Cicilan, SPP, Arisan.
+  4. Pasang PIN.
+- **Pengguna lama** yang sudah punya data tidak melihat halaman pembuka.
+- **Tampilan kosong** di Riwayat, Anggaran, Tabungan, dan Transaksi Rutin memakai ikon, penjelasan singkat, dan tombol aksi langsung.
+- **Getar halus (haptic)** saat menyimpan, mencatat, dan menghapus.
 
 ---
 
@@ -284,6 +303,9 @@ lib/
 │   └── home_shell.dart             # navigasi bawah 5 tab, app bar, FAB per tab
 ├── core/
 │   ├── database/hive_database.dart # registrasi adapter & buka box
+│   ├── navigation/home_tab.dart    # tab aktif (agar kartu bisa pindah tab)
+│   ├── theme/money_colors.dart     # warna pemasukan/pengeluaran sesuai mode terang/gelap
+│   ├── widgets/                    # EmptyState, InsightCard
 │   └── utils/
 │       ├── formatters.dart         # Rupiah, tanggal, input ribuan
 │       └── month.dart              # ekstensi bulan (firstOfMonth, addMonths, …)
@@ -302,6 +324,7 @@ lib/
 
 test/                               # unit & widget test (repository di memori, jam tetap)
 assets/icon/                        # sumber ikon aplikasi
+assets/fonts/                       # Plus Jakarta Sans + lisensi OFL
 ```
 
 ---
@@ -378,7 +401,7 @@ fvm flutter analyze
 fvm flutter test
 ```
 
-Ada **59 tes**, mencakup:
+Ada **67 tes**, mencakup:
 
 - **Unit:**
   - ringkasan, saldo, dan tren;
@@ -400,7 +423,10 @@ Ada **59 tes**, mencakup:
   - halaman pengingat dan notifikasi;
   - anggaran, tabungan, dan kategori;
   - layar PIN;
-  - tema gelap.
+  - tema gelap;
+  - riwayat per hari, saran judul, dan tombol nominal cepat;
+  - perbandingan bulan lalu, kartu Anggaran & Tabungan, dan geser bulan;
+  - halaman pembuka.
 
 Tes memakai repository di memori dan **jam tetap** (`3 Nov 2026 09.00`), sehingga hasilnya sama kapan pun dijalankan.
 

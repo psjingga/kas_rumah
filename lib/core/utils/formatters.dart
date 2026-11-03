@@ -22,6 +22,33 @@ abstract final class Fmt {
   static String dateTime(DateTime d) =>
       DateFormat("EEE, d MMM yyyy '·' HH.mm", 'id_ID').format(d);
 
+  /// Judul grup harian: "Hari ini", "Kemarin", atau "Senin, 2 Nov".
+  static String dayHeader(DateTime d, DateTime now) {
+    final day = DateTime(d.year, d.month, d.day);
+    final today = DateTime(now.year, now.month, now.day);
+    return switch (today.difference(day).inDays) {
+      0 => 'Hari ini',
+      1 => 'Kemarin',
+      _ => DateFormat(
+        d.year == now.year ? 'EEEE, d MMM' : 'EEEE, d MMM yyyy',
+        'id_ID',
+      ).format(d),
+    };
+  }
+
+  /// Perubahan persen dari [before] ke [after]: "▲12%" / "▼5%"; `null`
+  /// bila tidak bisa dibandingkan ([before] 0).
+  static String? change(double before, double after) {
+    if (before <= 0) return null;
+    final pct = ((after - before) / before * 100).round();
+    if (pct == 0) return '=0%';
+    return pct > 0 ? '▲$pct%' : '▼${-pct}%';
+  }
+
+  /// Dengan tanda: 250000 → "+Rp 250.000", -85000 → "−Rp 85.000".
+  static String signed(double value) =>
+      value >= 0 ? '+${rupiah(value)}' : '−${rupiah(-value)}';
+
   /// "Nov" (nama bulan singkat).
   static String shortMonth(DateTime d) => DateFormat('MMM', 'id_ID').format(d);
 

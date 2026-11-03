@@ -210,6 +210,13 @@ class InMemoryPreferencesRepository implements PreferencesRepository {
 
   @override
   Future<void> setLastBackupAt(DateTime time) async => lastBackupAt = time;
+
+  /// Default `true` agar tes langsung masuk ke halaman utama.
+  @override
+  bool onboardingDone = true;
+
+  @override
+  Future<void> setOnboardingDone() async => onboardingDone = true;
 }
 
 class InMemorySecurityRepository implements SecurityRepository {
