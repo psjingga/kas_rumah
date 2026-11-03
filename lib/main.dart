@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'features/wallets/presentation/providers/wallet_providers.dart';
+import 'features/wallets/data/hive_wallet_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -68,6 +70,9 @@ Future<void> main() async {
         HiveSecurityRepository(settings),
       ),
       biometricAuthProvider.overrideWithValue(LocalBiometricAuth()),
+      walletRepositoryProvider.overrideWithValue(
+        HiveWalletRepository(settings, boxes.transfers),
+      ),
     ],
   );
 

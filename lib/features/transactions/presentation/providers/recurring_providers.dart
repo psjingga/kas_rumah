@@ -63,6 +63,7 @@ class RecurringNotifier extends Notifier<List<RecurringTransaction>> {
     required TransactionCategory category,
     required int dayOfMonth,
     required DateTime startMonth,
+    String? walletId,
   }) async {
     final recurring = RecurringTransaction(
       id: _uuid.v4(),
@@ -72,6 +73,7 @@ class RecurringNotifier extends Notifier<List<RecurringTransaction>> {
       category: category,
       dayOfMonth: dayOfMonth,
       startMonth: startMonth,
+      walletId: walletId,
     );
     await save(recurring);
     return recurring;

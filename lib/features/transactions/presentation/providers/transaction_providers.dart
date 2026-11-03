@@ -173,6 +173,7 @@ class TransactionsNotifier extends Notifier<List<Transaction>> {
     required TransactionCategory category,
     required DateTime date,
     String? recurringId,
+    String? walletId,
   }) async {
     _validate(amount, type, category);
     final transaction = Transaction(
@@ -183,6 +184,7 @@ class TransactionsNotifier extends Notifier<List<Transaction>> {
       category: category,
       date: date,
       recurringId: recurringId,
+      walletId: walletId,
     );
     await _repository.save(transaction);
     state = _sorted([transaction, ...state]);
@@ -222,6 +224,7 @@ class TransactionsNotifier extends Notifier<List<Transaction>> {
       category: recurring.category,
       date: recurring.dueDate(month),
       recurringId: recurring.id,
+      walletId: recurring.walletId,
     );
   }
 

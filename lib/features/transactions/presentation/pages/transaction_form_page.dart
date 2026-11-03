@@ -1,5 +1,8 @@
 import 'dart:async';
 
+import '../../../wallets/presentation/widgets/wallet_widgets.dart';
+import '../../../wallets/presentation/providers/wallet_providers.dart';
+import '../../../wallets/domain/wallet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -46,6 +49,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   late TransactionType _type;
   late TransactionCategory _category;
   late DateTime _date;
+  late String _walletId;
 
   /// Mode tambah: simpan juga sebagai transaksi rutin bulanan.
   var _repeatMonthly = false;
@@ -79,6 +83,10 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     );
     _type = t?.type ?? r?.type ?? TransactionType.expense;
     _category = t?.category ?? r?.category ?? _firstCategory(_type);
+    _walletId =
+        t?.walletId ??
+        r?.walletId ??
+        (t == null ? ref.read(defaultWalletProvider).id : Wallet.mainId);
     _date =
         t?.date ??
         r?.dueDate(widget.month) ??
@@ -143,6 +151,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
             type: _type,
             category: _category,
             date: _date,
+            walletId: _walletId,
           ),
         );
       } else {
@@ -157,6 +166,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
             category: _category,
             dayOfMonth: _date.day,
             startMonth: _date.firstOfMonth,
+            walletId: _walletId,
           );
           recurringId = created.id;
         }
@@ -167,6 +177,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
           category: _category,
           date: _date,
           recurringId: recurringId,
+          walletId: _walletId,
         );
       }
 
@@ -226,6 +237,14 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
               type: _type,
               value: _category,
               onChanged: (c) => setState(() => _category = c),
+            ),
+            const SizedBox(height: 16),
+            WalletField(
+              label: _type == TransactionType.income
+                  ? 'Masuk ke dompet'
+                  : 'Dibayar dari dompet',
+              value: _walletId,
+              onChanged: (w) => setState(() => _walletId = w),
             ),
             const SizedBox(height: 16),
             InkWell(

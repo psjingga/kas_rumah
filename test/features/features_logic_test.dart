@@ -247,6 +247,7 @@ void main() {
           budgets: e.stores.budgets,
           goals: e.stores.goals,
           reminderSettings: e.stores.reminderSettings,
+          wallets: e.stores.wallets,
         );
         final json = service(a).exportJson(today);
 
@@ -283,6 +284,7 @@ void main() {
         budgets: InMemoryBudgetRepository(),
         goals: InMemoryGoalRepository(),
         reminderSettings: InMemoryReminderSettingsRepository(),
+        wallets: InMemoryWalletRepository(),
       );
       expect(
         () => s.inspect('bukan json'),

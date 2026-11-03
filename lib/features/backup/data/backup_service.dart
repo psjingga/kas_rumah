@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../../wallets/domain/wallet.dart';
+import '../../wallets/data/hive_wallet_repository.dart';
 import 'package:intl/intl.dart';
 
 import '../../budgets/domain/budget_repository.dart';
@@ -23,12 +25,15 @@ typedef BackupSummary = ({
   int categories,
   int budgets,
   int goals,
+  int wallets,
+  int transfers,
 });
 
 /// Membuat & memulihkan backup lengkap (JSON) serta ekspor CSV.
 ///
 /// Backup berisi semua data: transaksi, transaksi rutin, kategori buatan
-/// sendiri, anggaran, target tabungan, dan pengaturan pengingat.
+/// sendiri, anggaran, target tabungan, dompet & transfer, dan pengaturan
+/// pengingat. Versi 1 (sebelum ada dompet) tetap bisa dipulihkan.
 class BackupService {
   const BackupService({
     required this.transactions,
@@ -37,6 +42,7 @@ class BackupService {
     required this.budgets,
     required this.goals,
     required this.reminderSettings,
+    required this.wallets,
   });
 
   final TransactionRepository transactions;
@@ -45,9 +51,12 @@ class BackupService {
   final BudgetRepository budgets;
   final GoalRepository goals;
   final ReminderSettingsRepository reminderSettings;
+  final WalletRepository wallets;
 
   static const _app = 'keuangan_rumah_tangga';
-  static const formatVersion = 1;
+
+  /// 2 = menambahkan dompet & transfer.
+  static const formatVersion = 2;
 
   // ---------- Backup JSON ----------
 
@@ -64,6 +73,14 @@ class BackupService {
       'recurring': [for (final x in recurring.getAll()) _recurringToMap(x)],
       'budgets': budgets.getLimits(),
       'goals': [for (final g in goals.getAll()) HiveGoalRepository.toMap(g)],
+      'wallets': [
+        for (final w in wallets.getWallets())
+          HiveWalletRepository.walletToMap(w),
+      ],
+      'transfers': [
+        for (final t in wallets.getTransfers())
+          HiveWalletRepository.transferToMap(t),
+      ],
       'reminderSettings': {
         'enabled': r.enabled,
         'daysBefore': r.daysBefore,
@@ -85,6 +102,8 @@ class BackupService {
       categories: d.categories.length,
       budgets: d.budgets.length,
       goals: d.goals.length,
+      wallets: d.wallets.length,
+      transfers: d.transfers.length,
     );
   }
 
@@ -98,6 +117,8 @@ class BackupService {
     await budgets.replaceLimits(d.budgets);
     await budgets.saveSentAlerts(const {});
     await goals.replaceAll(d.goals);
+    await wallets.replaceWallets(d.wallets);
+    await wallets.replaceTransfers(d.transfers);
     if (d.reminderSettings case final s?) await reminderSettings.save(s);
     return inspect(json);
   }
@@ -133,6 +154,7 @@ class BackupService {
     'category': t.category.id,
     'date': t.date.millisecondsSinceEpoch,
     'recurringId': t.recurringId,
+    'walletId': t.walletId,
   };
 
   static Map<String, Object?> _recurringToMap(RecurringTransaction r) => {
@@ -144,6 +166,7 @@ class BackupService {
     'dayOfMonth': r.dayOfMonth,
     'startMonth': r.startMonth.millisecondsSinceEpoch,
     'active': r.active,
+    'walletId': r.walletId,
   };
 }
 
@@ -157,6 +180,8 @@ class _Decoded {
     this.budgets,
     this.goals,
     this.reminderSettings,
+    this.wallets,
+    this.transfers,
   );
 
   final DateTime exportedAt;
@@ -166,6 +191,8 @@ class _Decoded {
   final Map<String, double> budgets;
   final List<SavingsGoal> goals;
   final ReminderSettings? reminderSettings;
+  final List<Wallet> wallets;
+  final List<Transfer> transfers;
 
   static _Decoded parse(String json) {
     final Object? root;
@@ -207,6 +234,7 @@ class _Decoded {
               ),
               date: DateTime.fromMillisecondsSinceEpoch(m['date'] as int),
               recurringId: m['recurringId'] as String?,
+              walletId: m['walletId'] as String?,
             ),
         ],
         [
@@ -225,6 +253,7 @@ class _Decoded {
                 m['startMonth'] as int,
               ),
               active: m['active'] as bool? ?? true,
+              walletId: m['walletId'] as String?,
             ),
         ],
         {
@@ -242,6 +271,15 @@ class _Decoded {
                 budgetAlerts: r['budgetAlerts'] as bool? ?? true,
               )
             : null,
+        // v1 belum punya dompet → kosong (dipakai Dompet Utama bawaan).
+        [
+          for (final m in list('wallets'))
+            HiveWalletRepository.walletFromMap(m),
+        ],
+        [
+          for (final m in list('transfers'))
+            HiveWalletRepository.transferFromMap(m),
+        ],
       );
     } on Object catch (e) {
       // Data di dalamnya tidak lengkap / tipe salah.

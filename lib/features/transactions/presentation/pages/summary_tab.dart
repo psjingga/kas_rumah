@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../../../wallets/presentation/pages/wallet_pages.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -83,6 +84,8 @@ class SummaryTab extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           BalanceCard(summary: summary, previous: previous),
+          const SizedBox(height: 12),
+          const WalletsSummaryCard(),
           const SizedBox(height: 12),
           // Status anggaran & tabungan; ketuk untuk membuka tabnya.
           const IntrinsicHeight(

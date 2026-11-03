@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:keuangan_rumah_tangga/app/app.dart';
+import 'package:keuangan_rumah_tangga/features/transactions/presentation/widgets/balance_card.dart';
 import 'package:keuangan_rumah_tangga/features/reminders/domain/entities/notification_entry.dart';
 import 'package:keuangan_rumah_tangga/features/transactions/domain/entities/transaction.dart';
 
@@ -33,6 +34,11 @@ Future<InMemoryTransactionRepository> _pumpApp(
   return repo;
 }
 
+/// Teks di dalam kartu Sisa Saldo (nilai yang sama bisa muncul juga di
+/// kartu "Uang saat ini").
+Finder _inBalance(String text) =>
+    find.descendant(of: find.byType(BalanceCard), matching: find.text(text));
+
 /// Pindah tab lewat navigasi bawah.
 Future<void> _tab(WidgetTester tester, String label) async {
   await tester.tap(
@@ -62,7 +68,7 @@ void main() {
       ],
     );
 
-    expect(find.text('Rp 4.250.000'), findsOneWidget); // saldo
+    expect(_inBalance('Rp 4.250.000'), findsOneWidget); // saldo
     expect(find.text('Rp 5.000.000'), findsWidgets); // pemasukan
     expect(find.text('Pemasukan vs Pengeluaran'), findsOneWidget);
     expect(find.text('87.0%'), findsOneWidget); // legenda pemasukan
@@ -109,7 +115,7 @@ void main() {
     final saved = repo.getAll().single;
     expect(saved.amount, 85000);
     expect(saved.category, TransactionCategory.food);
-    expect(find.text('-Rp 85.000'), findsOneWidget); // saldo negatif
+    expect(_inBalance('-Rp 85.000'), findsOneWidget); // saldo negatif
     await _tab(tester, 'Riwayat');
     expect(find.text('Makan siang'), findsOneWidget);
   });
@@ -181,7 +187,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Rutin bulan ini'), findsNothing);
       expect(repo.getAll().single.date, DateTime(2026, 11, 5));
-      expect(find.text('-Rp 450.000'), findsOneWidget); // saldo
+      expect(_inBalance('-Rp 450.000'), findsOneWidget); // saldo
     });
 
     testWidgets('ubah nominal bulan ini & jadikan default', (tester) async {

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../wallets/presentation/widgets/wallet_widgets.dart';
+import '../../../wallets/presentation/providers/wallet_providers.dart';
 import '../../../../core/theme/money_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -24,14 +26,14 @@ class GoalDetailPage extends ConsumerWidget {
     SavingsGoal goal, {
     required bool withdraw,
   }) async {
-    final result = await showModalBottomSheet<(double, bool)>(
+    final result = await showModalBottomSheet<(double, bool, String)>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (_) => _DepositSheet(goal: goal, withdraw: withdraw),
     );
     if (result == null) return;
-    final (amount, record) = result;
+    final (amount, record, walletId) = result;
     await ref
         .read(goalsProvider.notifier)
         .deposit(
@@ -39,6 +41,7 @@ class GoalDetailPage extends ConsumerWidget {
           amount: withdraw ? -amount : amount,
           date: DateUtils.dateOnly(ref.read(clockProvider)()),
           recordTransaction: record,
+          walletId: walletId,
         );
     if (context.mounted) {
       showAppSnack(
@@ -179,20 +182,21 @@ class GoalDetailPage extends ConsumerWidget {
 }
 
 /// Lembar isi nominal setor/tarik.
-class _DepositSheet extends StatefulWidget {
+class _DepositSheet extends ConsumerStatefulWidget {
   const _DepositSheet({required this.goal, required this.withdraw});
 
   final SavingsGoal goal;
   final bool withdraw;
 
   @override
-  State<_DepositSheet> createState() => _DepositSheetState();
+  ConsumerState<_DepositSheet> createState() => _DepositSheetState();
 }
 
-class _DepositSheetState extends State<_DepositSheet> {
+class _DepositSheetState extends ConsumerState<_DepositSheet> {
   final _formKey = GlobalKey<FormState>();
   final _amount = TextEditingController();
   var _record = true;
+  late var _walletId = ref.read(defaultWalletProvider).id;
 
   @override
   void dispose() {
@@ -252,6 +256,12 @@ class _DepositSheetState extends State<_DepositSheet> {
               value: _record,
               onChanged: (v) => setState(() => _record = v),
             ),
+            if (_record)
+              WalletField(
+                label: withdraw ? 'Masuk ke dompet' : 'Diambil dari dompet',
+                value: _walletId,
+                onChanged: (w) => setState(() => _walletId = w),
+              ),
             const SizedBox(height: 8),
             FilledButton(
               onPressed: () {
@@ -259,6 +269,7 @@ class _DepositSheetState extends State<_DepositSheet> {
                   Navigator.pop(context, (
                     Fmt.parseAmount(_amount.text)!,
                     _record,
+                    _walletId,
                   ));
                 }
               },

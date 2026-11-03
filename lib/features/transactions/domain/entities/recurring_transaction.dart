@@ -21,6 +21,7 @@ class RecurringTransaction {
     required this.dayOfMonth,
     required this.startMonth,
     this.active = true,
+    this.walletId,
   }) : assert(amount > 0, 'Nominal harus lebih dari 0'),
        assert(dayOfMonth >= 1 && dayOfMonth <= 31, 'Tanggal 1–31');
 
@@ -42,6 +43,9 @@ class RecurringTransaction {
   /// Template nonaktif tidak muncul sebagai tagihan bulanan.
   final bool active;
 
+  /// Dompet yang dipakai saat dicatat; `null` = dompet bawaan.
+  final String? walletId;
+
   bool get isIncome => type == TransactionType.income;
 
   /// Apakah template ini harus dicatat di [month].
@@ -60,6 +64,7 @@ class RecurringTransaction {
     int? dayOfMonth,
     DateTime? startMonth,
     bool? active,
+    String? walletId,
   }) => RecurringTransaction(
     id: id,
     title: title ?? this.title,
@@ -69,6 +74,7 @@ class RecurringTransaction {
     dayOfMonth: dayOfMonth ?? this.dayOfMonth,
     startMonth: startMonth ?? this.startMonth,
     active: active ?? this.active,
+    walletId: walletId ?? this.walletId,
   );
 
   @override
@@ -81,7 +87,8 @@ class RecurringTransaction {
       other.category == category &&
       other.dayOfMonth == dayOfMonth &&
       other.startMonth == startMonth &&
-      other.active == active;
+      other.active == active &&
+      other.walletId == walletId;
 
   @override
   int get hashCode => Object.hash(
@@ -93,5 +100,6 @@ class RecurringTransaction {
     dayOfMonth,
     startMonth,
     active,
+    walletId,
   );
 }

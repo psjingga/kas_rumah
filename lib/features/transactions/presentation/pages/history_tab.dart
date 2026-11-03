@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../../wallets/presentation/widgets/wallet_widgets.dart';
+import '../../../wallets/presentation/providers/wallet_providers.dart';
+import '../../../wallets/presentation/pages/wallet_pages.dart';
+import '../../../wallets/domain/wallet.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/money_colors.dart';
@@ -15,13 +19,21 @@ import '../widgets/transaction_tile.dart';
 class HistoryTab extends ConsumerWidget {
   const HistoryTab({super.key});
 
-  /// Kelompokkan transaksi (sudah urut terbaru) per tanggal.
-  static List<(DateTime, List<Transaction>)> _byDay(List<Transaction> list) {
-    final groups = <(DateTime, List<Transaction>)>[];
-    for (final t in list) {
-      final day = DateUtils.dateOnly(t.date);
+  /// Kelompokkan transaksi & transfer per tanggal (terbaru dulu).
+  /// Item berupa [Transaction] atau [Transfer].
+  static List<(DateTime, List<Object>)> _byDay(
+    List<Transaction> transactions,
+    List<Transfer> transfers,
+  ) {
+    final items = <(DateTime, Object)>[
+      for (final t in transactions) (t.date, t),
+      for (final t in transfers) (t.date, t),
+    ]..sort((a, b) => b.$1.compareTo(a.$1));
+    final groups = <(DateTime, List<Object>)>[];
+    for (final (date, item) in items) {
+      final day = DateUtils.dateOnly(date);
       if (groups.isEmpty || groups.last.$1 != day) groups.add((day, []));
-      groups.last.$2.add(t);
+      groups.last.$2.add(item);
     }
     return groups;
   }
@@ -31,6 +43,7 @@ class HistoryTab extends ConsumerWidget {
     final month = ref.watch(selectedMonthProvider);
     final monthNotifier = ref.read(selectedMonthProvider.notifier);
     final transactions = ref.watch(monthTransactionsProvider);
+    final transfers = ref.watch(monthTransfersProvider);
     final summary = ref.watch(financeSummaryProvider);
     final now = ref.read(clockProvider)();
 
@@ -44,7 +57,7 @@ class HistoryTab extends ConsumerWidget {
           onNext: monthNotifier.next,
           onThisMonth: monthNotifier.goToThisMonth,
         ),
-        if (transactions.isEmpty)
+        if (transactions.isEmpty && transfers.isEmpty)
           EmptyState(
             icon: Icons.receipt_long_outlined,
             title: 'Belum ada transaksi di bulan ini.',
@@ -64,25 +77,37 @@ class HistoryTab extends ConsumerWidget {
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
-          for (final (day, items) in _byDay(transactions)) ...[
-            _DayHeader(day: day, now: now, items: items),
+          for (final (day, items) in _byDay(transactions, transfers)) ...[
+            _DayHeader(
+              day: day,
+              now: now,
+              items: items.whereType<Transaction>().toList(),
+            ),
             Card(
               clipBehavior: Clip.antiAlias,
               child: Column(
                 children: [
-                  for (final t in items)
-                    TransactionTile(
-                      key: ValueKey(t.id),
-                      transaction: t,
-                      showDate: false,
-                      onTap: () => openTransactionForm(
-                        context,
-                        month: month,
-                        initial: t,
+                  for (final item in items)
+                    switch (item) {
+                      final Transaction t => TransactionTile(
+                        key: ValueKey(t.id),
+                        transaction: t,
+                        showDate: false,
+                        onTap: () => openTransactionForm(
+                          context,
+                          month: month,
+                          initial: t,
+                        ),
+                        onDelete: () =>
+                            deleteTransactionWithUndo(context, ref, t),
                       ),
-                      onDelete: () =>
-                          deleteTransactionWithUndo(context, ref, t),
-                    ),
+                      final Transfer t => TransferTile(
+                        key: ValueKey('tr-${t.id}'),
+                        transfer: t,
+                        onDelete: () => deleteTransferWithUndo(context, ref, t),
+                      ),
+                      _ => const SizedBox.shrink(),
+                    },
                 ],
               ),
             ),
@@ -115,13 +140,14 @@ class _DayHeader extends StatelessWidget {
               style: style?.copyWith(fontWeight: FontWeight.w700),
             ),
           ),
-          Text(
-            Fmt.signed(net),
-            style: style?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: net >= 0 ? context.incomeColor : context.expenseColor,
+          if (items.isNotEmpty)
+            Text(
+              Fmt.signed(net),
+              style: style?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: net >= 0 ? context.incomeColor : context.expenseColor,
+              ),
             ),
-          ),
         ],
       ),
     );

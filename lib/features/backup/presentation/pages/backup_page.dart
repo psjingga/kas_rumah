@@ -86,8 +86,9 @@ class _BackupPageState extends ConsumerState<BackupPage> {
           'Backup ${Fmt.dateTime(summary.exportedAt)} berisi '
           '${summary.transactions} transaksi, ${summary.recurring} '
           'transaksi rutin, ${summary.categories} kategori, '
-          '${summary.budgets} anggaran, dan ${summary.goals} target '
-          'tabungan.\n\nSemua data di HP ini akan DIGANTI dengan isi '
+          '${summary.budgets} anggaran, ${summary.goals} target '
+          'tabungan, ${summary.wallets} dompet, dan ${summary.transfers} '
+          'transfer.\n\nSemua data di HP ini akan DIGANTI dengan isi '
           'backup.',
         ),
         actions: [

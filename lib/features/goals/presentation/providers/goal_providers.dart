@@ -69,6 +69,7 @@ class GoalsNotifier extends Notifier<List<SavingsGoal>> {
     required double amount,
     required DateTime date,
     bool recordTransaction = true,
+    String? walletId,
   }) async {
     if (amount == 0) throw ArgumentError.value(amount, 'amount');
     final goal = state.firstWhere((g) => g.id == goalId);
@@ -86,6 +87,7 @@ class GoalsNotifier extends Notifier<List<SavingsGoal>> {
                 ? TransactionCategory.savingsWithdrawal
                 : TransactionCategory.savings,
             date: date,
+            walletId: walletId,
           );
       transactionId = t.id;
     }

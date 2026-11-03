@@ -24,17 +24,24 @@ class TransactionAdapter extends TypeAdapter<Transaction> {
     final amount = reader.readDouble();
     // Jenis dibaca dulu: dibutuhkan untuk penanda kategori.
     final type = TransactionType.values.byName(reader.readString());
+    final category = TransactionCategory.byId(reader.readString(), type);
+    final date = DateTime.fromMillisecondsSinceEpoch(reader.readInt());
+    // v2: ID transaksi rutin (opsional).
+    String? optional() => reader.availableBytes > 0 && reader.readBool()
+        ? reader.readString()
+        : null;
+    final recurringId = optional();
+    // v3: ID dompet (opsional).
+    final walletId = optional();
     return Transaction(
       id: id,
       title: title,
       amount: amount,
       type: type,
-      category: TransactionCategory.byId(reader.readString(), type),
-      date: DateTime.fromMillisecondsSinceEpoch(reader.readInt()),
-      // v2: ID transaksi rutin (opsional).
-      recurringId: reader.availableBytes > 0 && reader.readBool()
-          ? reader.readString()
-          : null,
+      category: category,
+      date: date,
+      recurringId: recurringId,
+      walletId: walletId,
     );
   }
 
@@ -50,5 +57,7 @@ class TransactionAdapter extends TypeAdapter<Transaction> {
       ..writeInt(obj.date.millisecondsSinceEpoch)
       ..writeBool(obj.recurringId != null);
     if (obj.recurringId case final id?) writer.writeString(id);
+    writer.writeBool(obj.walletId != null);
+    if (obj.walletId case final id?) writer.writeString(id);
   }
 }

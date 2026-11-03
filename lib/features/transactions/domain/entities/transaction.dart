@@ -17,6 +17,7 @@ class Transaction {
     required this.category,
     required this.date,
     this.recurringId,
+    this.walletId,
   }) : assert(amount > 0, 'Nominal harus lebih dari 0');
 
   final String id;
@@ -36,6 +37,10 @@ class Transaction {
 
   bool get isRecurring => recurringId != null;
 
+  /// Dompet asal/tujuan uang. `null` = dompet bawaan (data versi lama
+  /// sebelum ada fitur dompet).
+  final String? walletId;
+
   bool get isIncome => type == TransactionType.income;
 
   /// Nominal bertanda: positif untuk pemasukan, negatif untuk pengeluaran.
@@ -47,6 +52,7 @@ class Transaction {
     TransactionType? type,
     TransactionCategory? category,
     DateTime? date,
+    String? walletId,
   }) => Transaction(
     id: id,
     title: title ?? this.title,
@@ -55,6 +61,7 @@ class Transaction {
     category: category ?? this.category,
     date: date ?? this.date,
     recurringId: recurringId,
+    walletId: walletId ?? this.walletId,
   );
 
   @override
@@ -66,11 +73,20 @@ class Transaction {
       other.type == type &&
       other.category == category &&
       other.date == date &&
-      other.recurringId == recurringId;
+      other.recurringId == recurringId &&
+      other.walletId == walletId;
 
   @override
-  int get hashCode =>
-      Object.hash(id, title, amount, type, category, date, recurringId);
+  int get hashCode => Object.hash(
+    id,
+    title,
+    amount,
+    type,
+    category,
+    date,
+    recurringId,
+    walletId,
+  );
 
   @override
   String toString() =>

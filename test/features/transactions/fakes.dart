@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:keuangan_rumah_tangga/features/wallets/presentation/providers/wallet_providers.dart';
+import 'package:keuangan_rumah_tangga/features/wallets/domain/wallet.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:keuangan_rumah_tangga/features/budgets/domain/budget_repository.dart';
 import 'package:keuangan_rumah_tangga/features/budgets/presentation/providers/budget_providers.dart';
@@ -240,6 +242,32 @@ class FakeBiometricAuth implements BiometricAuth {
   Future<bool> authenticate(String reason) async => succeed;
 }
 
+class InMemoryWalletRepository implements WalletRepository {
+  List<Wallet> wallets = [];
+  List<Transfer> transfers = [];
+
+  @override
+  List<Wallet> getWallets() => wallets;
+
+  @override
+  Future<void> replaceWallets(List<Wallet> w) async => wallets = w;
+
+  @override
+  List<Transfer> getTransfers() =>
+      [...transfers]..sort((a, b) => b.date.compareTo(a.date));
+
+  @override
+  Future<void> saveTransfer(Transfer t) async =>
+      transfers = [...transfers.where((x) => x.id != t.id), t];
+
+  @override
+  Future<void> deleteTransfer(String id) async =>
+      transfers = [...transfers.where((x) => x.id != id)];
+
+  @override
+  Future<void> replaceTransfers(List<Transfer> t) async => transfers = t;
+}
+
 /// Penyimpanan di memori lainnya; buat sendiri bila tes perlu memeriksa
 /// atau mengisi isinya.
 class TestStores {
@@ -250,6 +278,7 @@ class TestStores {
   final preferences = InMemoryPreferencesRepository();
   final security = InMemorySecurityRepository();
   final biometric = FakeBiometricAuth();
+  final wallets = InMemoryWalletRepository();
 }
 
 /// Override provider untuk tes: repository di memori, notifikasi palsu,
@@ -284,6 +313,7 @@ List<Override> _storeOverrides(TestStores s) => [
   preferencesRepositoryProvider.overrideWithValue(s.preferences),
   securityRepositoryProvider.overrideWithValue(s.security),
   biometricAuthProvider.overrideWithValue(s.biometric),
+  walletRepositoryProvider.overrideWithValue(s.wallets),
 ];
 
 Transaction tx(

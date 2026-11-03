@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../wallets/presentation/providers/wallet_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/formatters.dart';
@@ -90,6 +91,30 @@ class _TransactionSearchPageState extends ConsumerState<TransactionSearchPage> {
               ],
             ),
           ),
+          // Filter dompet (hanya bila dompet lebih dari satu).
+          if (ref.watch(walletsProvider) case final wallets
+              when wallets.length > 1)
+            SizedBox(
+              height: 52,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                children: [
+                  for (final w in wallets)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FilterChip(
+                        avatar: Icon(w.type.icon, size: 16, color: w.color),
+                        label: Text(w.name),
+                        selected: _filter.walletId == w.id,
+                        onSelected: (on) => setState(
+                          () => _filter = _filter.withWallet(on ? w.id : null),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           const Divider(height: 1),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),

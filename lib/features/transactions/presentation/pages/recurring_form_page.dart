@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../../wallets/presentation/widgets/wallet_widgets.dart';
+import '../../../wallets/presentation/providers/wallet_providers.dart';
+import '../../../wallets/domain/wallet.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/formatters.dart';
@@ -42,6 +45,9 @@ class _RecurringFormPageState extends ConsumerState<RecurringFormPage> {
       ref.read(categoriesOfTypeProvider(_type)).first;
   late var _day = widget.initial?.dayOfMonth ?? 1;
   late var _active = widget.initial?.active ?? true;
+  late var _walletId = widget.initial == null
+      ? ref.read(defaultWalletProvider).id
+      : widget.initial!.walletId ?? Wallet.mainId;
   var _saving = false;
 
   @override
@@ -70,6 +76,7 @@ class _RecurringFormPageState extends ConsumerState<RecurringFormPage> {
             category: _category,
             dayOfMonth: _day,
             active: _active,
+            walletId: _walletId,
           ),
         );
       } else {
@@ -80,6 +87,7 @@ class _RecurringFormPageState extends ConsumerState<RecurringFormPage> {
           category: _category,
           dayOfMonth: _day,
           startMonth: widget.startMonth,
+          walletId: _walletId,
         );
       }
       if (mounted) Navigator.of(context).pop(true);
@@ -172,6 +180,11 @@ class _RecurringFormPageState extends ConsumerState<RecurringFormPage> {
                   DropdownMenuItem(value: d, child: Text('Tanggal $d')),
               ],
               onChanged: (d) => setState(() => _day = d ?? _day),
+            ),
+            const SizedBox(height: 16),
+            WalletField(
+              value: _walletId,
+              onChanged: (w) => setState(() => _walletId = w),
             ),
             if (initial != null)
               SwitchListTile(

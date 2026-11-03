@@ -27,6 +27,10 @@ class RecurringAdapter extends TypeAdapter<RecurringTransaction> {
       dayOfMonth: reader.readByte(),
       startMonth: DateTime.fromMillisecondsSinceEpoch(reader.readInt()),
       active: reader.readBool(),
+      // v2: ID dompet (opsional; data lama tidak punya).
+      walletId: reader.availableBytes > 0 && reader.readBool()
+          ? reader.readString()
+          : null,
     );
   }
 
@@ -40,6 +44,8 @@ class RecurringAdapter extends TypeAdapter<RecurringTransaction> {
       ..writeString(obj.category.id)
       ..writeByte(obj.dayOfMonth)
       ..writeInt(obj.startMonth.millisecondsSinceEpoch)
-      ..writeBool(obj.active);
+      ..writeBool(obj.active)
+      ..writeBool(obj.walletId != null);
+    if (obj.walletId case final id?) writer.writeString(id);
   }
 }

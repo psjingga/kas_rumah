@@ -30,6 +30,7 @@
   - [Kunci aplikasi (PIN & sidik jari)](#9-kunci-aplikasi-pin--sidik-jari)
   - [Tema terang / gelap](#10-tema-terang--gelap)
   - [Halaman pembuka & tampilan kosong](#11-halaman-pembuka--tampilan-kosong)
+  - [Dompet & transfer](#12-dompet--transfer)
 - [Alur penggunaan](#alur-penggunaan)
 - [Arsitektur](#arsitektur)
 - [Struktur folder](#struktur-folder)
@@ -187,6 +188,7 @@ Menu ini ada di *Lainnya → Backup & Ekspor*.
 
 - **Buat backup & bagikan:** satu file `kas-rumah-backup-YYYY-MM-DD.json` berisi **semua data**:
   - transaksi dan transaksi rutin;
+  - dompet dan transfer;
   - kategori sendiri, anggaran, dan target tabungan;
   - pengaturan pengingat.
 
@@ -227,6 +229,25 @@ Menu ini ada di *Lainnya → Backup & Ekspor*.
 - **Getar halus (haptic)** saat menyimpan, mencatat, dan menghapus.
 
 ---
+
+### 12. Dompet & transfer
+
+Dompet dicatat **manual**, tidak tersambung ke bank atau e-wallet.
+
+- **Dompet** berisi nama, jenis (Tunai / Bank / E-wallet / Lainnya), saldo awal, dan warna. Contoh: Tunai, BCA, BRI, GoPay, DANA.
+  - Transaksi lama otomatis masuk ke **Dompet Utama**, yang namanya bisa diganti.
+  - Dompet pertama menjadi **dompet bawaan** untuk transaksi baru. Dompet lain bisa dijadikan bawaan lewat menu di detail dompet.
+- **Pilih dompet** di form transaksi ("Dibayar dari dompet" / "Masuk ke dompet"), transaksi rutin, dan setor/tarik tabungan.
+- **Saldo tiap dompet** = saldo awal + pemasukan − pengeluaran ± transfer.
+  - Kartu **"Uang saat ini"** di Ringkasan menampilkan total dan saldo per dompet.
+- **Transfer antar-dompet**, misalnya tarik tunai BCA → Tunai atau top up GoPay. Transfer:
+  - **tidak dihitung** sebagai pemasukan atau pengeluaran, jadi grafik dan anggaran tetap benar;
+  - tetap tampil di Riwayat pada harinya.
+- **Sesuaikan saldo:** isi saldo sebenarnya (misalnya dari m-banking), lalu selisihnya dicatat sebagai penyesuaian.
+- **Hapus atau arsipkan dompet:**
+  - dompet yang belum pernah dipakai bisa dihapus;
+  - dompet yang sudah punya riwayat hanya bisa **diarsipkan**, supaya riwayatnya tetap utuh.
+- **Pencarian** bisa difilter per dompet. Nama dompet tampil di tiap transaksi bila dompet aktif lebih dari satu.
 
 ## Alur penggunaan
 
@@ -319,6 +340,7 @@ lib/
     ├── reminders/                  # perencana pengingat, layanan notifikasi, riwayat notifikasi
     ├── budgets/                    # anggaran & peringatan
     ├── goals/                      # target tabungan
+    ├── wallets/                    # dompet, transfer, penyesuaian saldo
     ├── backup/                     # backup JSON, pulihkan, ekspor CSV
     └── settings/                   # tema, kunci PIN/biometrik, tab Lainnya
 
@@ -333,7 +355,7 @@ assets/fonts/                       # Plus Jakarta Sans + lisensi OFL
 
 | Entitas | Kolom utama |
 |---|---|
-| `Transaction` | `id`, `title`, `amount` (double, > 0), `type` (income/expense), `category`, `date`, `recurringId?` |
+| `Transaction` | `id`, `title`, `amount` (double, > 0), `type` (income/expense), `category`, `date`, `recurringId?`, `walletId?` |
 | `TransactionCategory` | `id`, `label`, `type`, `iconKey`, `color`, `builtIn` |
 | `RecurringTransaction` | `id`, `title`, `amount` (default), `type`, `category`, `dayOfMonth` (1–31), `startMonth`, `active` |
 | `SavingsGoal` | `id`, `name`, `target`, `deadline?`, `iconKey`, `colorValue`, `deposits[]` |
@@ -342,6 +364,8 @@ assets/fonts/                       # Plus Jakarta Sans + lisensi OFL
 | `ReminderSettings` | `enabled`, `daysBefore`, `hour`, `minute`, `budgetAlerts` |
 | `SecuritySettings` | `pinHash`, `salt`, `pinLength`, `biometric` |
 | `NotificationEntry` | `id`, `title`, `body`, `time`, `recurringId?`, `dueDate?`, `read` |
+| `Wallet` | `id`, `name`, `type` (cash/bank/ewallet/other), `colorValue`, `initialBalance`, `archived` |
+| `Transfer` | `id`, `fromWalletId?`, `toWalletId?` (salah satu kosong = penyesuaian), `amount`, `date`, `note` |
 
 **Penyimpanan Hive:**
 
@@ -349,7 +373,8 @@ assets/fonts/                       # Plus Jakarta Sans + lisensi OFL
 |---|---|
 | `transactions` | `Transaction` (TypeAdapter id 0) |
 | `recurring` | `RecurringTransaction` (TypeAdapter id 1) |
-| `settings` | Map biasa: kategori sendiri, anggaran, target tabungan, pengaturan pengingat, riwayat & jadwal notifikasi, tema, keamanan, waktu backup terakhir |
+| `transfers` | Transfer & penyesuaian saldo (map, key = ID) |
+| `settings` | Map biasa: dompet, kategori sendiri, anggaran, target tabungan, pengaturan pengingat, riwayat & jadwal notifikasi, tema, keamanan, waktu backup terakhir |
 
 ---
 
@@ -401,7 +426,7 @@ fvm flutter analyze
 fvm flutter test
 ```
 
-Ada **67 tes**, mencakup:
+Ada **77 tes**, mencakup:
 
 - **Unit:**
   - ringkasan, saldo, dan tren;
@@ -426,7 +451,8 @@ Ada **67 tes**, mencakup:
   - tema gelap;
   - riwayat per hari, saran judul, dan tombol nominal cepat;
   - perbandingan bulan lalu, kartu Anggaran & Tabungan, dan geser bulan;
-  - halaman pembuka.
+  - halaman pembuka;
+  - dompet: saldo, transfer, penyesuaian, arsip, filter, adapter, backup v2/v1, dan alur UI.
 
 Tes memakai repository di memori dan **jam tetap** (`3 Nov 2026 09.00`), sehingga hasilnya sama kapan pun dijalankan.
 
@@ -477,7 +503,6 @@ Tanpa `key.properties`, build release memakai kunci debug. Ini hanya cocok untuk
 
 ## Rencana pengembangan
 
-- [ ] Beberapa dompet/akun (Tunai, Bank, e-wallet) dan transfer antar-akun
 - [ ] Enkripsi file backup dengan kata sandi
 - [ ] Backup otomatis terjadwal ke Google Drive
 - [ ] Lampiran foto struk/nota pada transaksi

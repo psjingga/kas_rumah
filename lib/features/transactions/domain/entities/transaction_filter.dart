@@ -6,7 +6,12 @@ import 'transaction.dart';
 /// kriteria kosong/`null` berarti "semua".
 @immutable
 class TransactionFilter {
-  const TransactionFilter({this.query = '', this.type, this.category});
+  const TransactionFilter({
+    this.query = '',
+    this.type,
+    this.category,
+    this.walletId,
+  });
 
   /// Kata kunci: dicocokkan ke judul dan nama kategori (tanpa beda huruf
   /// besar/kecil). Angka juga dicocokkan ke nominal, mis. "450" → 450.000.
@@ -14,11 +19,19 @@ class TransactionFilter {
   final TransactionType? type;
   final TransactionCategory? category;
 
-  bool get isEmpty => query.trim().isEmpty && type == null && category == null;
+  /// Hanya transaksi dompet ini (`main` juga mencakup data tanpa dompet).
+  final String? walletId;
+
+  bool get isEmpty =>
+      query.trim().isEmpty &&
+      type == null &&
+      category == null &&
+      walletId == null;
 
   bool matches(Transaction t) {
     if (type != null && t.type != type) return false;
     if (category != null && t.category != category) return false;
+    if (walletId != null && (t.walletId ?? 'main') != walletId) return false;
 
     final q = query.trim().toLowerCase();
     if (q.isEmpty) return true;
@@ -37,11 +50,28 @@ class TransactionFilter {
     query: query,
     type: type,
     category: type == null || category?.type == type ? category : null,
+    walletId: walletId,
   );
 
-  TransactionFilter withQuery(String query) =>
-      TransactionFilter(query: query, type: type, category: category);
+  TransactionFilter withQuery(String query) => TransactionFilter(
+    query: query,
+    type: type,
+    category: category,
+    walletId: walletId,
+  );
 
   TransactionFilter withCategory(TransactionCategory? category) =>
-      TransactionFilter(query: query, type: type, category: category);
+      TransactionFilter(
+        query: query,
+        type: type,
+        category: category,
+        walletId: walletId,
+      );
+
+  TransactionFilter withWallet(String? walletId) => TransactionFilter(
+    query: query,
+    type: type,
+    category: category,
+    walletId: walletId,
+  );
 }

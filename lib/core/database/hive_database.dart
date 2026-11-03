@@ -10,6 +10,7 @@ typedef HiveBoxes = ({
   Box<Transaction> transactions,
   Box<RecurringTransaction> recurring,
   Box<dynamic> settings,
+  Box<dynamic> transfers,
 });
 
 /// Konfigurasi Hive: inisialisasi, registrasi adapter, dan pembukaan box.
@@ -17,6 +18,7 @@ abstract final class HiveDatabase {
   static const transactionsBox = 'transactions';
   static const recurringBox = 'recurring';
   static const settingsBox = 'settings';
+  static const transfersBox = 'transfers';
 
   /// Panggil sekali di `main()` sebelum `runApp`.
   static Future<HiveBoxes> init() async {
@@ -34,6 +36,7 @@ abstract final class HiveDatabase {
       transactions: await Hive.openBox<Transaction>(transactionsBox),
       recurring: await Hive.openBox<RecurringTransaction>(recurringBox),
       settings: await Hive.openBox<dynamic>(settingsBox),
+      transfers: await Hive.openBox<dynamic>(transfersBox),
     );
   }
 }

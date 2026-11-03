@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../wallets/presentation/providers/wallet_providers.dart';
+import '../../../wallets/domain/wallet.dart';
 import '../../../../core/theme/money_colors.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../domain/entities/transaction.dart';
 
 /// Satu baris transaksi. Ketuk untuk mengubah, geser ke kiri untuk menghapus.
-class TransactionTile extends StatelessWidget {
+class TransactionTile extends ConsumerWidget {
   const TransactionTile({
     super.key,
     required this.transaction,
@@ -22,8 +25,12 @@ class TransactionTile extends StatelessWidget {
   final bool showDate;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final t = transaction;
+    // Nama dompet hanya ditampilkan bila dompet aktif lebih dari satu.
+    final walletName = ref.watch(activeWalletsProvider).length > 1
+        ? ref.watch(walletLookupProvider)[t.walletId ?? Wallet.mainId]?.name
+        : null;
     final scheme = Theme.of(context).colorScheme;
     final amountColor = t.isIncome ? context.incomeColor : context.expenseColor;
 
@@ -53,9 +60,11 @@ class TransactionTile extends StatelessWidget {
             ],
             Flexible(
               child: Text(
-                showDate
-                    ? '${t.category.label} · ${Fmt.date(t.date)}'
-                    : t.category.label,
+                [
+                  t.category.label,
+                  ?walletName,
+                  if (showDate) Fmt.date(t.date),
+                ].join(' · '),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),

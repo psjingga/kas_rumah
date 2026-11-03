@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../wallets/presentation/pages/wallet_pages.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/formatters.dart';
@@ -30,6 +31,12 @@ class MoreTab extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.only(bottom: 24),
       children: [
+        ListTile(
+          leading: const Icon(Icons.account_balance_wallet_outlined),
+          title: const Text('Dompet'),
+          subtitle: const Text('Tunai, bank, e-wallet & transfer'),
+          onTap: () => _push(context, const WalletsPage()),
+        ),
         ListTile(
           leading: const Icon(Icons.event_repeat),
           title: const Text('Transaksi Rutin'),
