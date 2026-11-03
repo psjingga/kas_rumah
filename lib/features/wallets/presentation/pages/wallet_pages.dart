@@ -732,15 +732,42 @@ class _TransferFormPageState extends ConsumerState<TransferFormPage> {
   }
 }
 
-/// Kartu "Uang saat ini" di Ringkasan: total + saldo tiap dompet.
+/// Kartu "Uang saat ini" di Ringkasan: uang yang benar-benar ada hari ini,
+/// saldo tiap dompet, lalu rincian transaksi terjadwal sampai akhir bulan
+/// dan perkiraan uang di akhir bulan.
 class WalletsSummaryCard extends ConsumerWidget {
   const WalletsSummaryCard({super.key});
+
+  /// Paling banyak sekian transaksi terjadwal yang dirinci.
+  static const _maxListed = 4;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final wallets = ref.watch(activeWalletsProvider);
     final balances = ref.watch(walletBalancesProvider);
+    final upcoming = ref.watch(upcomingThisMonthProvider);
+    final f = ref.watch(monthEndForecastProvider);
+    final today = ref.read(clockProvider)();
     final textTheme = Theme.of(context).textTheme;
+    final muted = textTheme.bodySmall;
+
+    Widget row(String label, String value, {Color? color, bool bold = false}) =>
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
+            children: [
+              Expanded(child: Text(label, style: textTheme.bodyMedium)),
+              Text(
+                value,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: color,
+                  fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        );
+
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -748,7 +775,7 @@ class WalletsSummaryCard extends ConsumerWidget {
           context,
         ).push(MaterialPageRoute<void>(builder: (_) => const WalletsPage())),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
+          padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -760,7 +787,7 @@ class WalletsSummaryCard extends ConsumerWidget {
                     child: Text('Uang saat ini', style: textTheme.labelLarge),
                   ),
                   Text(
-                    Fmt.rupiah(ref.watch(totalMoneyProvider)),
+                    Fmt.rupiah(f.now),
                     style: textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
@@ -768,7 +795,12 @@ class WalletsSummaryCard extends ConsumerWidget {
                   const Icon(Icons.chevron_right, size: 18),
                 ],
               ),
-              const SizedBox(height: 10),
+              Text(
+                'Uang yang benar-benar ada per ${Fmt.date(today)}: hanya '
+                'transaksi sampai hari ini.',
+                style: muted,
+              ),
+              const SizedBox(height: 8),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
@@ -787,6 +819,94 @@ class WalletsSummaryCard extends ConsumerWidget {
                   ],
                 ),
               ),
+              const Divider(height: 20),
+              Text(
+                'Sampai akhir ${Fmt.monthName(today)}',
+                style: textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              if (upcoming.isEmpty)
+                Text(
+                  'Tidak ada transaksi terjadwal setelah hari ini.',
+                  style: muted,
+                )
+              else ...[
+                if (f.incoming > 0)
+                  row(
+                    'Akan masuk (${upcoming.where((t) => t.isIncome).length})',
+                    Fmt.signed(f.incoming),
+                    color: context.incomeColor,
+                  ),
+                if (f.outgoing > 0)
+                  row(
+                    'Akan keluar (${upcoming.where((t) => !t.isIncome).length})',
+                    Fmt.signed(-f.outgoing),
+                    color: context.expenseColor,
+                  ),
+                // Rincian transaksi terjadwal.
+                for (final t in upcoming.take(_maxListed))
+                  Padding(
+                    padding: const EdgeInsets.only(left: 12, top: 2),
+                    child: Row(
+                      children: [
+                        Icon(
+                          t.category.icon,
+                          size: 14,
+                          color: t.category.color,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            '${t.title} · ${Fmt.date(t.date)}',
+                            style: muted,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Text(Fmt.signed(t.signedAmount), style: muted),
+                      ],
+                    ),
+                  ),
+                if (upcoming.length > _maxListed)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 12, top: 2),
+                    child: Text(
+                      'dan ${upcoming.length - _maxListed} transaksi lainnya',
+                      style: muted,
+                    ),
+                  ),
+                const SizedBox(height: 6),
+                row(
+                  'Perkiraan uang akhir bulan',
+                  Fmt.rupiah(f.forecast),
+                  bold: true,
+                  color: f.forecast < 0 ? context.expenseColor : null,
+                ),
+              ],
+              if (f.unrecordedCount > 0) ...[
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: context.warningColor,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        '${f.unrecordedCount} transaksi rutin bulan ini belum '
+                        'dicatat (${Fmt.signed(f.unrecordedNet)}), belum '
+                        'termasuk perkiraan di atas.',
+                        style: muted?.copyWith(color: context.warningColor),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),

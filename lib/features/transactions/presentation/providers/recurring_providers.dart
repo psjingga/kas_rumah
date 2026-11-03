@@ -25,15 +25,14 @@ final recurringProvider =
 /// Begitu dicatat (ada transaksi dengan `recurringId` yang sama di bulan
 /// itu), item hilang dari daftar ini. Bila transaksinya dihapus, item
 /// muncul lagi.
-final pendingRecurringProvider = Provider<List<RecurringTransaction>>((ref) {
+final pendingRecurringProvider = Provider<List<RecurringOccurrence>>((ref) {
   final month = ref.watch(selectedMonthProvider);
-  final recorded = {
-    for (final t in ref.watch(monthTransactionsProvider)) ?t.recurringId,
-  };
+  final transactions = ref.watch(transactionsProvider);
   return [
     for (final r in ref.watch(recurringProvider))
-      if (r.appliesTo(month) && !recorded.contains(r.id)) r,
-  ];
+      for (final o in r.occurrencesIn(month))
+        if (!r.isRecordedIn(transactions, o.date)) o,
+  ]..sort((a, b) => a.date.compareTo(b.date));
 });
 
 class RecurringNotifier extends Notifier<List<RecurringTransaction>> {
@@ -64,6 +63,10 @@ class RecurringNotifier extends Notifier<List<RecurringTransaction>> {
     required int dayOfMonth,
     required DateTime startMonth,
     String? walletId,
+    RecurrenceFrequency frequency = RecurrenceFrequency.monthly,
+    int weekday = DateTime.monday,
+    int monthOfYear = 1,
+    int? totalOccurrences,
   }) async {
     final recurring = RecurringTransaction(
       id: _uuid.v4(),
@@ -74,6 +77,10 @@ class RecurringNotifier extends Notifier<List<RecurringTransaction>> {
       dayOfMonth: dayOfMonth,
       startMonth: startMonth,
       walletId: walletId,
+      frequency: frequency,
+      weekday: weekday,
+      monthOfYear: monthOfYear,
+      totalOccurrences: totalOccurrences,
     );
     await save(recurring);
     return recurring;

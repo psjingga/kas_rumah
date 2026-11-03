@@ -13,7 +13,7 @@ class TransactionFilter {
     this.walletId,
   });
 
-  /// Kata kunci: dicocokkan ke judul dan nama kategori (tanpa beda huruf
+  /// Kata kunci: dicocokkan ke judul, catatan, dan nama kategori (tanpa beda huruf
   /// besar/kecil). Angka juga dicocokkan ke nominal, mis. "450" → 450.000.
   final String query;
   final TransactionType? type;
@@ -37,6 +37,7 @@ class TransactionFilter {
     if (q.isEmpty) return true;
     final digits = q.replaceAll(RegExp(r'[.\s]'), '');
     return t.title.toLowerCase().contains(q) ||
+        t.note.toLowerCase().contains(q) ||
         t.category.label.toLowerCase().contains(q) ||
         (RegExp(r'^\d+$').hasMatch(digits) &&
             t.amount.toStringAsFixed(0).contains(digits));

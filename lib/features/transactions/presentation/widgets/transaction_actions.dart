@@ -36,6 +36,7 @@ Future<void> openTransactionForm(
   required DateTime month,
   Transaction? initial,
   RecurringTransaction? recurring,
+  DateTime? occurrenceDate,
 }) async {
   final saved = await Navigator.of(context).push<bool>(
     MaterialPageRoute(
@@ -43,6 +44,7 @@ Future<void> openTransactionForm(
         month: month,
         initial: initial,
         recurring: recurring,
+        occurrenceDate: occurrenceDate,
       ),
     ),
   );

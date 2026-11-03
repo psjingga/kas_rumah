@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../transactions/domain/entities/transaction.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/utils/month.dart';
@@ -66,6 +67,64 @@ final walletBalancesProvider = Provider<Map<String, double>>(
     asOf: _endOfToday(ref),
   ),
 );
+
+/// Transaksi **bulan berjalan** yang sudah dicatat tetapi tanggalnya setelah
+/// hari ini (mis. cicilan tgl 8 padahal hari ini tgl 3). Urut tanggal.
+final upcomingThisMonthProvider = Provider<List<Transaction>>((ref) {
+  final limit = _endOfToday(ref);
+  return [
+    for (final t in ref.watch(transactionsProvider))
+      if (t.date.isAfter(limit) && t.date.isSameMonthAs(limit)) t,
+  ]..sort((a, b) => a.date.compareTo(b.date));
+});
+
+/// Perkiraan uang di akhir bulan berjalan.
+typedef MonthEndForecast = ({
+  /// Uang saat ini (semua dompet aktif).
+  double now,
+
+  /// Transaksi terjadwal setelah hari ini s/d akhir bulan.
+  double incoming,
+  double outgoing,
+
+  /// [now] + [incoming] − [outgoing].
+  double forecast,
+
+  /// Tagihan/pemasukan rutin bulan ini yang belum dicatat (tidak masuk
+  /// perkiraan; hanya peringatan).
+  int unrecordedCount,
+  double unrecordedNet,
+});
+
+final monthEndForecastProvider = Provider<MonthEndForecast>((ref) {
+  final upcoming = ref.watch(upcomingThisMonthProvider);
+  final incoming = upcoming
+      .where((t) => t.isIncome)
+      .fold(0.0, (s, t) => s + t.amount);
+  final outgoing = upcoming
+      .where((t) => !t.isIncome)
+      .fold(0.0, (s, t) => s + t.amount);
+  final now = ref.watch(totalMoneyProvider);
+
+  final month = ref.read(clockProvider)().firstOfMonth;
+  final transactions = ref.watch(transactionsProvider);
+  final unrecorded = [
+    for (final r in ref.watch(recurringProvider))
+      for (final o in r.occurrencesIn(month))
+        if (!r.isRecordedIn(transactions, o.date)) r,
+  ];
+  return (
+    now: now,
+    incoming: incoming,
+    outgoing: outgoing,
+    forecast: now + incoming - outgoing,
+    unrecordedCount: unrecorded.length,
+    unrecordedNet: unrecorded.fold(
+      0.0,
+      (s, r) => s + (r.isIncome ? r.amount : -r.amount),
+    ),
+  );
+});
 
 /// Jumlah transaksi bertanggal setelah hari ini (belum dihitung di saldo).
 final upcomingTransactionCountProvider = Provider<int>((ref) {
@@ -216,6 +275,29 @@ class TransfersNotifier extends Notifier<List<Transfer>> {
       amount: diff.abs(),
       date: date,
       note: 'Penyesuaian saldo',
+    );
+    await _put(t);
+    return t;
+  }
+
+  /// Catat uang masuk ([incoming]) / keluar dari [walletId] karena
+  /// utang/piutang. Tidak dihitung sebagai pemasukan/pengeluaran.
+  Future<Transfer> recordDebtMovement({
+    required String walletId,
+    required double amount,
+    required bool incoming,
+    required DateTime date,
+    required String note,
+    required String debtId,
+  }) async {
+    final t = Transfer(
+      id: _uuid.v4(),
+      fromWalletId: incoming ? null : walletId,
+      toWalletId: incoming ? walletId : null,
+      amount: amount,
+      date: date,
+      note: note,
+      debtId: debtId,
     );
     await _put(t);
     return t;

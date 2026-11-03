@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../debts/presentation/providers/debt_providers.dart';
 import '../../../transactions/presentation/providers/recurring_providers.dart';
 import '../../../transactions/presentation/providers/transaction_providers.dart';
 import '../../domain/entities/notification_entry.dart';
@@ -43,6 +44,7 @@ final plannedRemindersProvider = Provider<List<PlannedReminder>>(
     transactions: ref.watch(transactionsProvider),
     settings: ref.watch(reminderSettingsProvider),
     now: ref.read(clockProvider)(),
+    debts: ref.watch(debtsProvider),
   ),
 );
 

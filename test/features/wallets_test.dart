@@ -144,6 +144,59 @@ void main() {
       expect(e.c.read(upcomingTransactionCountProvider), 2);
     });
 
+    test('perkiraan akhir bulan: uang saat ini + yang terjadwal', () {
+      // Sama seperti data pengguna: hari ini 3 Nov.
+      final e = _env(
+        transactions: [
+          _t(
+            'gaji-abba',
+            9000000,
+            TransactionCategory.salary,
+            date: DateTime(2026, 11, 1),
+          ),
+          _t(
+            'gaji-umma',
+            9000000,
+            TransactionCategory.salary,
+            date: DateTime(2026, 11, 1),
+          ),
+          _t(
+            'shopee',
+            3000000,
+            TransactionCategory.bills,
+            date: DateTime(2026, 11, 3),
+          ),
+          _t(
+            'rumah',
+            5000000,
+            TransactionCategory.bills,
+            date: DateTime(2026, 11, 5),
+          ),
+          _t(
+            'motor',
+            2265000,
+            TransactionCategory.bills,
+            date: DateTime(2026, 11, 8),
+          ),
+          _t(
+            'des',
+            9000000,
+            TransactionCategory.salary,
+            date: DateTime(2026, 12, 1),
+          ),
+        ],
+      );
+      expect(e.c.read(balanceProvider), 7735000); // Sisa Saldo November
+      final f = e.c.read(monthEndForecastProvider);
+      expect(f.now, 15000000);
+      expect((f.incoming, f.outgoing), (0.0, 7265000.0));
+      expect(f.forecast, 7735000);
+      expect(e.c.read(upcomingThisMonthProvider).map((t) => t.id), [
+        'rumah',
+        'motor',
+      ]);
+    });
+
     test('sesuaikan saldo mencatat selisih sebagai penyesuaian', () async {
       final e = _env(wallets: [_bca]);
       final notifier = e.c.read(transfersProvider.notifier);
@@ -261,7 +314,7 @@ void main() {
   );
 
   test(
-    'backup v2 menyertakan dompet & transfer; v1 tetap bisa dipulihkan',
+    'backup menyertakan dompet & transfer; v1 tetap bisa dipulihkan',
     () async {
       final s = TestStores();
       s.wallets.wallets = [Wallet.main, _bca];
@@ -286,9 +339,10 @@ void main() {
             goals: st.goals,
             reminderSettings: st.reminderSettings,
             wallets: st.wallets,
+            debts: st.debts,
           );
       final json = service(s, txRepo).exportJson(today);
-      expect(jsonDecode(json)['version'], 2);
+      expect(jsonDecode(json)['version'], BackupService.formatVersion);
 
       final fresh = TestStores();
       final freshTx = InMemoryTransactionRepository();

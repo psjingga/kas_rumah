@@ -1,10 +1,16 @@
 import 'dart:async';
+import 'features/debts/presentation/providers/debt_providers.dart';
+import 'features/debts/data/hive_debt_repository.dart';
+import 'dart:io';
 
+import 'features/transactions/presentation/widgets/receipt_widgets.dart';
+import 'features/transactions/data/receipt_store.dart';
 import 'features/wallets/presentation/providers/wallet_providers.dart';
 import 'features/wallets/data/hive_wallet_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'app/app.dart';
 import 'core/database/hive_database.dart';
@@ -38,6 +44,9 @@ Future<void> main() async {
   final boxes = await HiveDatabase.init();
   final notifications = LocalNotificationService();
   await notifications.init();
+  final receipts = ReceiptStore(
+    Directory('${(await getApplicationDocumentsDirectory()).path}/receipts'),
+  );
 
   // Suntikkan implementasi asli (Hive, plugin notifikasi, biometrik).
   final settings = boxes.settings;
@@ -70,6 +79,8 @@ Future<void> main() async {
         HiveSecurityRepository(settings),
       ),
       biometricAuthProvider.overrideWithValue(LocalBiometricAuth()),
+      receiptStoreProvider.overrideWithValue(receipts),
+      debtRepositoryProvider.overrideWithValue(HiveDebtRepository(settings)),
       walletRepositoryProvider.overrideWithValue(
         HiveWalletRepository(settings, boxes.transfers),
       ),
@@ -123,6 +134,13 @@ Future<void> main() async {
       inbox: inbox,
     );
   }, fireImmediately: true);
+
+  // Bersihkan foto struk yang tidak lagi dipakai transaksi mana pun.
+  unawaited(
+    receipts.cleanupOrphans({
+      for (final t in boxes.transactions.values) ?t.photoPath,
+    }),
+  );
 
   // Notifikasi dikirim sistem walau aplikasi tertutup; perbarui riwayat
   // saat aplikasi kembali dibuka dan tiap menit selama aplikasi terbuka.

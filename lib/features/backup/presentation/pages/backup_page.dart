@@ -87,8 +87,9 @@ class _BackupPageState extends ConsumerState<BackupPage> {
           '${summary.transactions} transaksi, ${summary.recurring} '
           'transaksi rutin, ${summary.categories} kategori, '
           '${summary.budgets} anggaran, ${summary.goals} target '
-          'tabungan, ${summary.wallets} dompet, dan ${summary.transfers} '
-          'transfer.\n\nSemua data di HP ini akan DIGANTI dengan isi '
+          'tabungan, ${summary.wallets} dompet, ${summary.transfers} '
+          'transfer, dan ${summary.debts} utang/piutang. Foto struk tidak '
+          'ikut dalam backup.\n\nSemua data di HP ini akan DIGANTI dengan isi '
           'backup.',
         ),
         actions: [

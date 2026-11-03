@@ -101,14 +101,17 @@ class TransferTile extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     String name(String? id) => lookup[id]?.name ?? 'Dompet dihapus';
 
-    final title = t.isAdjustment
-        ? 'Penyesuaian ${name(t.fromWalletId ?? t.toWalletId)}'
-        : '${name(t.fromWalletId)} → ${name(t.toWalletId)}';
+    final title = switch (t) {
+      Transfer(isDebt: true) => t.note,
+      Transfer(isAdjustment: true) =>
+        'Penyesuaian ${name(t.fromWalletId ?? t.toWalletId)}',
+      _ => '${name(t.fromWalletId)} → ${name(t.toWalletId)}',
+    };
     final effect = perspectiveWalletId == null
         ? null
         : t.effectOn(perspectiveWalletId!);
     final amountText = switch (effect) {
-      null when t.isAdjustment =>
+      null when t.isAdjustment || t.isDebt =>
         t.toWalletId != null ? Fmt.signed(t.amount) : Fmt.signed(-t.amount),
       null => Fmt.rupiah(t.amount),
       final e => Fmt.signed(e),
@@ -118,16 +121,24 @@ class TransferTile extends ConsumerWidget {
       leading: CircleAvatar(
         backgroundColor: scheme.secondaryContainer,
         child: Icon(
-          t.isAdjustment ? Icons.tune : Icons.swap_horiz,
+          t.isDebt
+              ? Icons.handshake_outlined
+              : t.isAdjustment
+              ? Icons.tune
+              : Icons.swap_horiz,
           color: scheme.onSecondaryContainer,
           size: 20,
         ),
       ),
       title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(
-        t.note.isEmpty || t.note == 'Penyesuaian saldo'
-            ? (t.isAdjustment ? 'Penyesuaian saldo' : 'Transfer')
-            : t.note,
+        switch (t) {
+          Transfer(isDebt: true) =>
+            'Utang/piutang · ${name(t.fromWalletId ?? t.toWalletId)}',
+          _ when t.note.isEmpty || t.note == 'Penyesuaian saldo' =>
+            t.isAdjustment ? 'Penyesuaian saldo' : 'Transfer',
+          _ => t.note,
+        },
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),

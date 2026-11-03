@@ -49,6 +49,9 @@ abstract final class Fmt {
   static String signed(double value) =>
       value >= 0 ? '+${rupiah(value)}' : '−${rupiah(-value)}';
 
+  /// "November" (nama bulan saja).
+  static String monthName(DateTime d) => DateFormat('MMMM', 'id_ID').format(d);
+
   /// "Nov" (nama bulan singkat).
   static String shortMonth(DateTime d) => DateFormat('MMM', 'id_ID').format(d);
 

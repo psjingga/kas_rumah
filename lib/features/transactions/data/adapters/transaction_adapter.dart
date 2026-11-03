@@ -33,6 +33,9 @@ class TransactionAdapter extends TypeAdapter<Transaction> {
     final recurringId = optional();
     // v3: ID dompet (opsional).
     final walletId = optional();
+    // v4: catatan & foto struk (opsional).
+    final note = optional() ?? '';
+    final photoPath = optional();
     return Transaction(
       id: id,
       title: title,
@@ -42,6 +45,8 @@ class TransactionAdapter extends TypeAdapter<Transaction> {
       date: date,
       recurringId: recurringId,
       walletId: walletId,
+      note: note,
+      photoPath: photoPath,
     );
   }
 
@@ -54,10 +59,16 @@ class TransactionAdapter extends TypeAdapter<Transaction> {
       ..writeDouble(obj.amount)
       ..writeString(obj.type.name)
       ..writeString(obj.category.id)
-      ..writeInt(obj.date.millisecondsSinceEpoch)
-      ..writeBool(obj.recurringId != null);
-    if (obj.recurringId case final id?) writer.writeString(id);
-    writer.writeBool(obj.walletId != null);
-    if (obj.walletId case final id?) writer.writeString(id);
+      ..writeInt(obj.date.millisecondsSinceEpoch);
+    // Kolom opsional: penanda bool lalu nilainya.
+    void optional(String? v) {
+      writer.writeBool(v != null);
+      if (v != null) writer.writeString(v);
+    }
+
+    optional(obj.recurringId);
+    optional(obj.walletId);
+    optional(obj.note.isEmpty ? null : obj.note);
+    optional(obj.photoPath);
   }
 }

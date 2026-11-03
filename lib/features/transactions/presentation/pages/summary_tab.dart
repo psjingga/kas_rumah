@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import '../../../wallets/presentation/providers/wallet_providers.dart';
+import '../../../debts/presentation/pages/debt_pages.dart';
 import '../../../wallets/presentation/pages/wallet_pages.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -24,16 +26,18 @@ import '../widgets/transaction_actions.dart';
 class SummaryTab extends ConsumerWidget {
   const SummaryTab({super.key});
 
-  /// Catat satu transaksi rutin dengan nominal default.
+  /// Catat satu jatuh tempo rutin dengan nominal default.
   Future<void> _record(
     BuildContext context,
     WidgetRef ref,
-    RecurringTransaction recurring,
+    RecurringOccurrence occurrence,
   ) async {
     final notifier = ref.read(transactionsProvider.notifier);
+    final recurring = occurrence.recurring;
     final created = await notifier.recordRecurring(
       recurring,
-      ref.read(selectedMonthProvider),
+      occurrence.date,
+      date: occurrence.date,
     );
     unawaited(HapticFeedback.lightImpact());
     if (!context.mounted) return;
@@ -50,11 +54,9 @@ class SummaryTab extends ConsumerWidget {
   Future<void> _recordAll(
     BuildContext context,
     WidgetRef ref,
-    List<RecurringTransaction> items,
+    List<RecurringOccurrence> items,
   ) async {
-    await ref
-        .read(transactionsProvider.notifier)
-        .recordAllRecurring(items, ref.read(selectedMonthProvider));
+    await ref.read(transactionsProvider.notifier).recordAllRecurring(items);
     if (context.mounted) {
       showAppSnack(context, '${items.length} transaksi rutin dicatat.');
     }
@@ -83,7 +85,16 @@ class SummaryTab extends ConsumerWidget {
             onThisMonth: monthNotifier.goToThisMonth,
           ),
           const SizedBox(height: 4),
-          BalanceCard(summary: summary, previous: previous),
+          BalanceCard(
+            summary: summary,
+            previous: previous,
+            // Hanya untuk bulan berjalan; bulan lain tidak relevan.
+            scheduledNet: monthNotifier.isThisMonth
+                ? ref
+                      .watch(upcomingThisMonthProvider)
+                      .fold<double>(0, (s, t) => s + t.signedAmount)
+                : null,
+          ),
           const SizedBox(height: 12),
           const WalletsSummaryCard(),
           const SizedBox(height: 12),
@@ -98,14 +109,19 @@ class SummaryTab extends ConsumerWidget {
               ],
             ),
           ),
+          const DebtsOverviewCard(),
           if (pending.isNotEmpty) ...[
             const SizedBox(height: 12),
             RecurringDueCard(
               items: pending,
               month: month,
-              onRecord: (r) => _record(context, ref, r),
-              onEdit: (r) =>
-                  openTransactionForm(context, month: month, recurring: r),
+              onRecord: (o) => _record(context, ref, o),
+              onEdit: (o) => openTransactionForm(
+                context,
+                month: month,
+                recurring: o.recurring,
+                occurrenceDate: o.date,
+              ),
               onRecordAll: () => _recordAll(context, ref, pending),
             ),
           ],

@@ -17,10 +17,10 @@ class RecurringDueCard extends StatelessWidget {
     required this.onRecordAll,
   });
 
-  final List<RecurringTransaction> items;
+  final List<RecurringOccurrence> items;
   final DateTime month;
-  final ValueChanged<RecurringTransaction> onRecord;
-  final ValueChanged<RecurringTransaction> onEdit;
+  final ValueChanged<RecurringOccurrence> onRecord;
+  final ValueChanged<RecurringOccurrence> onEdit;
   final VoidCallback onRecordAll;
 
   @override
@@ -51,22 +51,31 @@ class RecurringDueCard extends StatelessWidget {
               ],
             ),
           ),
-          for (final r in items)
+          for (final o in items)
             ListTile(
-              onTap: () => onEdit(r),
-              leading: Icon(r.category.icon, color: r.category.color),
+              onTap: () => onEdit(o),
+              leading: Icon(
+                o.recurring.category.icon,
+                color: o.recurring.category.color,
+              ),
               title: Text(
-                r.title,
+                o.recurring.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
               subtitle: Text(
-                'Tgl ${r.dueDate(month).day} · ${Fmt.rupiah(r.amount)}',
+                [
+                  Fmt.date(o.date),
+                  Fmt.rupiah(o.recurring.amount),
+                  // Cicilan: "ke-3/12".
+                  if (o.recurring.totalOccurrences case final total?)
+                    'ke-${o.number}/$total',
+                ].join(' · '),
               ),
               trailing: IconButton(
-                tooltip: 'Catat ${r.title}',
+                tooltip: 'Catat ${o.recurring.title}',
                 icon: Icon(Icons.check_circle_outline, color: scheme.primary),
-                onPressed: () => onRecord(r),
+                onPressed: () => onRecord(o),
               ),
             ),
           if (items.length > 1)

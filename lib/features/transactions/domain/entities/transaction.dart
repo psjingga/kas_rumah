@@ -18,6 +18,8 @@ class Transaction {
     required this.date,
     this.recurringId,
     this.walletId,
+    this.note = '',
+    this.photoPath,
   }) : assert(amount > 0, 'Nominal harus lebih dari 0');
 
   final String id;
@@ -41,6 +43,12 @@ class Transaction {
   /// sebelum ada fitur dompet).
   final String? walletId;
 
+  /// Catatan tambahan (opsional), mis. "Beli di pasar Kranji".
+  final String note;
+
+  /// Path file foto struk/nota di penyimpanan aplikasi (opsional).
+  final String? photoPath;
+
   bool get isIncome => type == TransactionType.income;
 
   /// Nominal bertanda: positif untuk pemasukan, negatif untuk pengeluaran.
@@ -53,6 +61,9 @@ class Transaction {
     TransactionCategory? category,
     DateTime? date,
     String? walletId,
+    String? note,
+    // Fungsi agar foto bisa dihapus (dikembalikan ke null).
+    String? Function()? photoPath,
   }) => Transaction(
     id: id,
     title: title ?? this.title,
@@ -62,6 +73,8 @@ class Transaction {
     date: date ?? this.date,
     recurringId: recurringId,
     walletId: walletId ?? this.walletId,
+    note: note ?? this.note,
+    photoPath: photoPath == null ? this.photoPath : photoPath(),
   );
 
   @override
@@ -74,7 +87,9 @@ class Transaction {
       other.category == category &&
       other.date == date &&
       other.recurringId == recurringId &&
-      other.walletId == walletId;
+      other.walletId == walletId &&
+      other.note == note &&
+      other.photoPath == photoPath;
 
   @override
   int get hashCode => Object.hash(
@@ -86,6 +101,8 @@ class Transaction {
     date,
     recurringId,
     walletId,
+    note,
+    photoPath,
   );
 
   @override

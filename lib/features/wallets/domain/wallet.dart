@@ -93,6 +93,7 @@ class Transfer {
     this.fromWalletId,
     this.toWalletId,
     this.note = '',
+    this.debtId,
   }) : assert(amount > 0),
        assert(fromWalletId != null || toWalletId != null);
 
@@ -107,7 +108,15 @@ class Transfer {
   final DateTime date;
   final String note;
 
-  bool get isAdjustment => fromWalletId == null || toWalletId == null;
+  /// Diisi bila perpindahan uang ini berasal dari utang/piutang (pinjam,
+  /// meminjamkan, bayar, terima pelunasan).
+  final String? debtId;
+
+  bool get isDebt => debtId != null;
+
+  /// Penyesuaian saldo: satu sisi kosong dan bukan dari utang/piutang.
+  bool get isAdjustment =>
+      !isDebt && (fromWalletId == null || toWalletId == null);
 
   /// Perubahan saldo [walletId] akibat transfer ini.
   double effectOn(String walletId) =>
@@ -122,11 +131,12 @@ class Transfer {
       other.toWalletId == toWalletId &&
       other.amount == amount &&
       other.date == date &&
-      other.note == note;
+      other.note == note &&
+      other.debtId == debtId;
 
   @override
   int get hashCode =>
-      Object.hash(id, fromWalletId, toWalletId, amount, date, note);
+      Object.hash(id, fromWalletId, toWalletId, amount, date, note, debtId);
 }
 
 /// Hitung saldo semua dompet: saldo awal + pemasukan − pengeluaran ±

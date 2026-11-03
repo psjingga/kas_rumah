@@ -58,6 +58,19 @@ class TransactionTile extends ConsumerWidget {
               Icon(Icons.event_repeat, size: 14, color: scheme.outline),
               const SizedBox(width: 4),
             ],
+            // Penanda ada catatan / foto struk.
+            if (t.photoPath != null) ...[
+              Icon(Icons.receipt_outlined, size: 14, color: scheme.outline),
+              const SizedBox(width: 4),
+            ],
+            if (t.note.isNotEmpty) ...[
+              Icon(
+                Icons.sticky_note_2_outlined,
+                size: 14,
+                color: scheme.outline,
+              ),
+              const SizedBox(width: 4),
+            ],
             Flexible(
               child: Text(
                 [

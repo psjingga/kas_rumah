@@ -31,6 +31,8 @@
   - [Tema terang / gelap](#10-tema-terang--gelap)
   - [Halaman pembuka & tampilan kosong](#11-halaman-pembuka--tampilan-kosong)
   - [Dompet & transfer](#12-dompet--transfer)
+  - [Utang & piutang](#13-utang--piutang)
+  - [Catatan & foto struk](#14-catatan--foto-struk)
 - [Alur penggunaan](#alur-penggunaan)
 - [Arsitektur](#arsitektur)
 - [Struktur folder](#struktur-folder)
@@ -112,12 +114,20 @@ Semua angka dihitung **per bulan**. Bulan dipilih dengan tombol `‹ November 20
 | Tanggal | Date picker berbahasa Indonesia |
 | *Ulangi tiap bulan* | Opsional: sekaligus membuat transaksi rutin |
 
-### 3. Transaksi rutin bulanan
+### 3. Transaksi rutin (mingguan, bulanan, tahunan) & cicilan
 
-Untuk pemasukan atau pengeluaran yang terjadi tiap bulan, seperti gaji, listrik, internet, SPP, atau cicilan.
+Untuk pemasukan atau pengeluaran berulang, seperti gaji, listrik, internet, SPP, uang jajan mingguan, pajak motor tahunan, atau cicilan.
 
-- **Template rutin** berisi judul, kategori, **nominal default**, **tanggal tiap bulan** (1–31), dan status aktif/nonaktif.
-  - Tanggal 29–31 otomatis memakai akhir bulan di bulan yang lebih pendek.
+- **Template rutin** berisi judul, kategori, **nominal default**, dompet, jadwal, dan status aktif/nonaktif.
+- **Jadwalnya bisa:**
+  - **Mingguan** (*"Tiap Senin"*);
+  - **Bulanan** (*"Tiap tgl 5"*; tanggal 29–31 memakai akhir bulan di bulan yang lebih pendek);
+  - **Tahunan** (*"Tiap 15 Mar"*).
+- **Cicilan / ada batas waktu:** isi jumlah kali bayar (misalnya 12x), dan form langsung menampilkan *"Lunas setelah …"*.
+  - Daftar rutin menampilkan progres *"Cicilan 3/12"* lalu *"Lunas ✓"*.
+  - Kartu rutin menampilkan *"ke-3/12"*.
+  - Setelah lunas, cicilan berhenti muncul dan tidak dihitung di total rutin.
+- **Total rutin per bulan** memakai nominal setara bulanan: mingguan ×52/12, tahunan ÷12.
 - **Membuatnya:**
   - lewat *Lainnya → Transaksi Rutin*, atau
   - menyalakan **"Ulangi tiap bulan"** saat menambah transaksi.
@@ -128,7 +138,7 @@ Untuk pemasukan atau pengeluaran yang terjadi tiap bulan, seperti gaji, listrik,
   - **Catat semua** mencatat semuanya sekaligus dengan nominal default.
 - **Aturan:**
   - Transaksi rutin **tidak dicatat otomatis**. Ia hanya muncul sebagai pengingat, jadi tidak ada data palsu.
-  - Mencatat dua kali di bulan yang sama tidak membuat data dobel.
+  - Mencatat dua kali di periode yang sama (minggu yang sama untuk rutin mingguan, bulan yang sama untuk bulanan/tahunan) tidak membuat data dobel.
   - Mengubah nominal default tidak mengubah bulan yang sudah tercatat.
   - Menghapus transaksi rutin yang sudah dicatat membuatnya muncul lagi sebagai *belum dicatat*.
 
@@ -189,6 +199,8 @@ Menu ini ada di *Lainnya → Backup & Ekspor*.
 - **Buat backup & bagikan:** satu file `kas-rumah-backup-YYYY-MM-DD.json` berisi **semua data**:
   - transaksi dan transaksi rutin;
   - dompet dan transfer;
+  - utang dan piutang;
+  - catatan transaksi (foto struk tidak ikut);
   - kategori sendiri, anggaran, dan target tabungan;
   - pengaturan pengingat.
 
@@ -248,6 +260,38 @@ Dompet dicatat **manual**, tidak tersambung ke bank atau e-wallet.
   - dompet yang belum pernah dipakai bisa dihapus;
   - dompet yang sudah punya riwayat hanya bisa **diarsipkan**, supaya riwayatnya tetap utuh.
 - **Pencarian** bisa difilter per dompet. Nama dompet tampil di tiap transaksi bila dompet aktif lebih dari satu.
+
+### 13. Utang & piutang
+
+Dibuka lewat *Lainnya → Utang & Piutang*, atau kartu di Ringkasan bila ada yang belum lunas.
+
+- **Jenis catatan:**
+  - **Saya pinjam** (utang): misalnya *"Pinjam dari Bu RT Rp 500.000"*.
+  - **Saya pinjamkan** (piutang): misalnya *"Dipinjam oleh Pak Budi Rp 1.000.000"*.
+- Isinya tanggal pinjam, **jatuh tempo** (opsional), dan catatan.
+- **Catat ke dompet:**
+  - Uang pinjaman masuk ke dompet, atau uang yang dipinjamkan keluar dari dompet.
+  - Pembayaran mengubah saldo dompet ke arah sebaliknya.
+  - Perpindahan ini **tidak dihitung** sebagai pemasukan atau pengeluaran.
+- **Pembayaran sebagian:**
+  - Progres tampil sebagai *"Dibayar Rp x dari Rp y"*.
+  - Nominal otomatis terisi sisa utang, jadi untuk melunasi cukup ketuk Simpan.
+  - Saat lunas, aplikasi menampilkan *"Lunas! 🎉"*.
+- **Ringkasan** di halaman ini: total *Utang saya* dan *Piutang*, filter Belum lunas / Lunas, dan status *"Lewat 3 hari"* berwarna merah.
+- **Pengingat jatuh tempo** mengikuti pengaturan H-n dan jam pengingat.
+  - Ketuk notifikasinya untuk langsung membuka detail utang/piutang.
+  - Di halaman Notifikasi, statusnya tampil sebagai *Lunas / Belum lunas*.
+- **Menghapus** catatan atau pembayaran ikut membatalkan perpindahan uang di dompet.
+
+### 14. Catatan & foto struk
+
+- Setiap transaksi bisa diberi **catatan** (maks. 200 karakter) dan **foto struk** dari kamera atau galeri.
+  - Foto dikecilkan otomatis dan disimpan di folder aplikasi, jadi tetap ada walau foto aslinya di galeri dihapus.
+  - Ketuk foto untuk melihat layar penuh (bisa di-zoom).
+- **Riwayat** menampilkan ikon kecil bila transaksi punya catatan atau foto.
+- **Pencarian** juga mencocokkan isi catatan, dan **CSV** punya kolom *Catatan*.
+- Foto yang tidak lagi dipakai (transaksi dihapus, atau form dibatalkan setelah memotret) dibersihkan otomatis saat aplikasi dibuka.
+- **Foto struk tidak ikut file backup**, karena file backup berupa teks. Catatan tetap ikut.
 
 ## Alur penggunaan
 
@@ -341,6 +385,7 @@ lib/
     ├── budgets/                    # anggaran & peringatan
     ├── goals/                      # target tabungan
     ├── wallets/                    # dompet, transfer, penyesuaian saldo
+    ├── debts/                      # utang & piutang
     ├── backup/                     # backup JSON, pulihkan, ekspor CSV
     └── settings/                   # tema, kunci PIN/biometrik, tab Lainnya
 
@@ -355,9 +400,9 @@ assets/fonts/                       # Plus Jakarta Sans + lisensi OFL
 
 | Entitas | Kolom utama |
 |---|---|
-| `Transaction` | `id`, `title`, `amount` (double, > 0), `type` (income/expense), `category`, `date`, `recurringId?`, `walletId?` |
+| `Transaction` | `id`, `title`, `amount` (double, > 0), `type` (income/expense), `category`, `date`, `recurringId?`, `walletId?`, `note`, `photoPath?` |
 | `TransactionCategory` | `id`, `label`, `type`, `iconKey`, `color`, `builtIn` |
-| `RecurringTransaction` | `id`, `title`, `amount` (default), `type`, `category`, `dayOfMonth` (1–31), `startMonth`, `active` |
+| `RecurringTransaction` | `id`, `title`, `amount` (default), `type`, `category`, `frequency` (weekly/monthly/yearly), `dayOfMonth`, `weekday`, `monthOfYear`, `totalOccurrences?` (cicilan), `startMonth`, `active`, `walletId?` |
 | `SavingsGoal` | `id`, `name`, `target`, `deadline?`, `iconKey`, `colorValue`, `deposits[]` |
 | `GoalDeposit` | `id`, `amount` (+ setor / − tarik), `date`, `transactionId?` |
 | Anggaran | `Map<categoryId, limit>` |
@@ -365,7 +410,9 @@ assets/fonts/                       # Plus Jakarta Sans + lisensi OFL
 | `SecuritySettings` | `pinHash`, `salt`, `pinLength`, `biometric` |
 | `NotificationEntry` | `id`, `title`, `body`, `time`, `recurringId?`, `dueDate?`, `read` |
 | `Wallet` | `id`, `name`, `type` (cash/bank/ewallet/other), `colorValue`, `initialBalance`, `archived` |
-| `Transfer` | `id`, `fromWalletId?`, `toWalletId?` (salah satu kosong = penyesuaian), `amount`, `date`, `note` |
+| `Transfer` | `id`, `fromWalletId?`, `toWalletId?` (salah satu kosong = penyesuaian / utang-piutang), `amount`, `date`, `note`, `debtId?` |
+| `Debt` | `id`, `person`, `direction` (iOwe/theyOwe), `amount`, `date`, `dueDate?`, `note`, `walletId?`, `transferId?`, `payments[]` |
+| `DebtPayment` | `id`, `amount`, `date`, `transferId?` |
 
 **Penyimpanan Hive:**
 
@@ -389,6 +436,7 @@ assets/fonts/                       # Plus Jakarta Sans + lisensi OFL
 | ID unik | `uuid` |
 | Notifikasi terjadwal | `flutter_local_notifications`, `timezone`, `flutter_timezone` |
 | Backup & ekspor | `share_plus`, `file_picker`, `path_provider` |
+| Foto struk | `image_picker` |
 | Kunci aplikasi | `crypto` (SHA-256), `local_auth` (biometrik) |
 | Ikon aplikasi | `flutter_launcher_icons` (dev) |
 
@@ -426,7 +474,7 @@ fvm flutter analyze
 fvm flutter test
 ```
 
-Ada **77 tes**, mencakup:
+Ada **92 tes**, mencakup:
 
 - **Unit:**
   - ringkasan, saldo, dan tren;
@@ -452,7 +500,10 @@ Ada **77 tes**, mencakup:
   - riwayat per hari, saran judul, dan tombol nominal cepat;
   - perbandingan bulan lalu, kartu Anggaran & Tabungan, dan geser bulan;
   - halaman pembuka;
-  - dompet: saldo, transfer, penyesuaian, arsip, filter, adapter, backup v2/v1, dan alur UI.
+  - dompet: saldo, transfer, penyesuaian, arsip, filter, adapter, backup v2/v1, dan alur UI;
+  - rutin mingguan, tahunan, dan cicilan, beserta pengingatnya;
+  - utang-piutang (efek ke dompet, pelunasan, pengingat, backup);
+  - catatan, foto struk, dan pembersihan foto yatim.
 
 Tes memakai repository di memori dan **jam tetap** (`3 Nov 2026 09.00`), sehingga hasilnya sama kapan pun dijalankan.
 
@@ -505,7 +556,6 @@ Tanpa `key.properties`, build release memakai kunci debug. Ini hanya cocok untuk
 
 - [ ] Enkripsi file backup dengan kata sandi
 - [ ] Backup otomatis terjadwal ke Google Drive
-- [ ] Lampiran foto struk/nota pada transaksi
 - [ ] Widget layar utama (sisa saldo & tombol tambah cepat)
 - [ ] Sinkronisasi antar-anggota keluarga
 - [ ] Laporan PDF bulanan

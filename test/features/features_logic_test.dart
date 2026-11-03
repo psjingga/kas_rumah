@@ -248,6 +248,7 @@ void main() {
           goals: e.stores.goals,
           reminderSettings: e.stores.reminderSettings,
           wallets: e.stores.wallets,
+          debts: e.stores.debts,
         );
         final json = service(a).exportJson(today);
 
@@ -285,6 +286,7 @@ void main() {
         goals: InMemoryGoalRepository(),
         reminderSettings: InMemoryReminderSettingsRepository(),
         wallets: InMemoryWalletRepository(),
+        debts: InMemoryDebtRepository(),
       );
       expect(
         () => s.inspect('bukan json'),
@@ -318,8 +320,8 @@ void main() {
         ),
       ]);
       expect(csv.split('\n'), [
-        'Tanggal;Jenis;Kategori;Judul;Nominal',
-        '2026-11-03;Pengeluaran;Makanan;"Bakso; ""enak""";25000',
+        'Tanggal;Jenis;Kategori;Judul;Nominal;Catatan',
+        '2026-11-03;Pengeluaran;Makanan;"Bakso; ""enak""";25000;',
       ]);
     });
   });

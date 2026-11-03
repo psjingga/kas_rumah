@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:keuangan_rumah_tangga/features/debts/presentation/providers/debt_providers.dart';
+import 'package:keuangan_rumah_tangga/features/debts/domain/debt.dart';
 import 'package:keuangan_rumah_tangga/features/wallets/presentation/providers/wallet_providers.dart';
 import 'package:keuangan_rumah_tangga/features/wallets/domain/wallet.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -268,6 +270,16 @@ class InMemoryWalletRepository implements WalletRepository {
   Future<void> replaceTransfers(List<Transfer> t) async => transfers = t;
 }
 
+class InMemoryDebtRepository implements DebtRepository {
+  List<Debt> debts = [];
+
+  @override
+  List<Debt> getAll() => [...debts];
+
+  @override
+  Future<void> replaceAll(List<Debt> d) async => debts = [...d];
+}
+
 /// Penyimpanan di memori lainnya; buat sendiri bila tes perlu memeriksa
 /// atau mengisi isinya.
 class TestStores {
@@ -279,6 +291,7 @@ class TestStores {
   final security = InMemorySecurityRepository();
   final biometric = FakeBiometricAuth();
   final wallets = InMemoryWalletRepository();
+  final debts = InMemoryDebtRepository();
 }
 
 /// Override provider untuk tes: repository di memori, notifikasi palsu,
@@ -314,6 +327,7 @@ List<Override> _storeOverrides(TestStores s) => [
   securityRepositoryProvider.overrideWithValue(s.security),
   biometricAuthProvider.overrideWithValue(s.biometric),
   walletRepositoryProvider.overrideWithValue(s.wallets),
+  debtRepositoryProvider.overrideWithValue(s.debts),
 ];
 
 Transaction tx(

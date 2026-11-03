@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../debts/presentation/providers/debt_providers.dart';
 import '../../../wallets/presentation/providers/wallet_providers.dart';
 import '../../../budgets/presentation/providers/budget_providers.dart';
 import '../../../goals/presentation/providers/goal_providers.dart';
@@ -18,6 +19,7 @@ final backupServiceProvider = Provider<BackupService>(
     goals: ref.watch(goalRepositoryProvider),
     reminderSettings: ref.watch(reminderSettingsRepositoryProvider),
     wallets: ref.watch(walletRepositoryProvider),
+    debts: ref.watch(debtRepositoryProvider),
   ),
 );
 
@@ -31,5 +33,6 @@ void reloadAllData(WidgetRef ref) {
     ..invalidate(goalsProvider)
     ..invalidate(reminderSettingsProvider)
     ..invalidate(walletsProvider)
-    ..invalidate(transfersProvider);
+    ..invalidate(transfersProvider)
+    ..invalidate(debtsProvider);
 }

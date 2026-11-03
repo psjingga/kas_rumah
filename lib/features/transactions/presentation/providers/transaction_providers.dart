@@ -174,6 +174,8 @@ class TransactionsNotifier extends Notifier<List<Transaction>> {
     required DateTime date,
     String? recurringId,
     String? walletId,
+    String note = '',
+    String? photoPath,
   }) async {
     _validate(amount, type, category);
     final transaction = Transaction(
@@ -185,6 +187,8 @@ class TransactionsNotifier extends Notifier<List<Transaction>> {
       date: date,
       recurringId: recurringId,
       walletId: walletId,
+      note: note.trim(),
+      photoPath: photoPath,
     );
     await _repository.save(transaction);
     state = _sorted([transaction, ...state]);
@@ -209,10 +213,19 @@ class TransactionsNotifier extends Notifier<List<Transaction>> {
     RecurringTransaction recurring,
     DateTime month, {
     double? amount,
+    DateTime? date,
   }) async {
+    // Jatuh tempo yang dicatat: [date] (mis. Senin tertentu untuk rutin
+    // mingguan), atau jatuh tempo pertama di [month].
+    final due =
+        date ??
+        recurring.occurrencesIn(month).firstOrNull?.date ??
+        recurring.dueDate(month);
     final existing = state
         .where(
-          (t) => t.recurringId == recurring.id && t.date.isSameMonthAs(month),
+          (t) =>
+              t.recurringId == recurring.id &&
+              recurring.samePeriod(t.date, due),
         )
         .firstOrNull;
     if (existing != null) return existing;
@@ -222,19 +235,16 @@ class TransactionsNotifier extends Notifier<List<Transaction>> {
       amount: amount ?? recurring.amount,
       type: recurring.type,
       category: recurring.category,
-      date: recurring.dueDate(month),
+      date: due,
       recurringId: recurring.id,
       walletId: recurring.walletId,
     );
   }
 
-  /// Catat semua [recurring] untuk [month] dengan nominal default.
-  Future<void> recordAllRecurring(
-    Iterable<RecurringTransaction> recurring,
-    DateTime month,
-  ) async {
-    for (final r in recurring) {
-      await recordRecurring(r, month);
+  /// Catat semua jatuh tempo [items] dengan nominal default.
+  Future<void> recordAllRecurring(Iterable<RecurringOccurrence> items) async {
+    for (final o in items) {
+      await recordRecurring(o.recurring, o.date, date: o.date);
     }
   }
 

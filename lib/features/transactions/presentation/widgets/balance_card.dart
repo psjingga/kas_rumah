@@ -7,12 +7,21 @@ import '../../domain/entities/finance_summary.dart';
 /// sebagai keterangan (tidak ikut dijumlahkan), lalu pemasukan &
 /// pengeluaran.
 class BalanceCard extends StatelessWidget {
-  const BalanceCard({super.key, required this.summary, this.previous});
+  const BalanceCard({
+    super.key,
+    required this.summary,
+    this.previous,
+    this.scheduledNet,
+  });
 
   final FinanceSummary summary;
 
   /// Ringkasan bulan lalu, untuk perbandingan pemasukan & pengeluaran.
   final FinanceSummary? previous;
+
+  /// Total bertanda transaksi bulan ini yang tanggalnya setelah hari ini
+  /// (sudah ikut dihitung di sisa saldo). `null`/0 = tidak ada.
+  final double? scheduledNet;
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +69,12 @@ class BalanceCard extends StatelessWidget {
               'Sisa bulan lalu ${Fmt.rupiah(summary.previousMonthBalance)}',
               style: muted,
             ),
+            // Sisa saldo menghitung seluruh bulan, termasuk yang terjadwal.
+            if (scheduledNet case final s? when s.abs() >= 1)
+              Text(
+                'Termasuk ${Fmt.signed(s)} terjadwal setelah hari ini',
+                style: muted,
+              ),
             const SizedBox(height: 16),
             // IntrinsicHeight: kedua kotak selalu sama tinggi.
             IntrinsicHeight(
@@ -74,9 +89,10 @@ class BalanceCard extends StatelessWidget {
                       change: previous == null
                           ? null
                           : Fmt.change(
-                              previous!.totalIncome,
-                              summary.totalIncome,
-                            ),
+                                  previous!.totalIncome,
+                                  summary.totalIncome,
+                                ) ??
+                                '—',
                     ),
                   ),
                   const SizedBox(width: 12),

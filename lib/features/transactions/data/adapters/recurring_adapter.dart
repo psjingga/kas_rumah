@@ -18,19 +18,34 @@ class RecurringAdapter extends TypeAdapter<RecurringTransaction> {
     final amount = reader.readDouble();
     // Jenis dibaca dulu: dibutuhkan untuk penanda kategori.
     final type = TransactionType.values.byName(reader.readString());
+    final category = TransactionCategory.byId(reader.readString(), type);
+    final dayOfMonth = reader.readByte();
+    final startMonth = DateTime.fromMillisecondsSinceEpoch(reader.readInt());
+    final active = reader.readBool();
+    bool more() => reader.availableBytes > 0;
+    // v2: ID dompet (opsional; data lama tidak punya).
+    final walletId = more() && reader.readBool() ? reader.readString() : null;
+    // v3: frekuensi, hari, bulan, jumlah cicilan.
+    final frequency = more()
+        ? RecurrenceFrequency.values.byName(reader.readString())
+        : RecurrenceFrequency.monthly;
+    final weekday = more() ? reader.readByte() : DateTime.monday;
+    final monthOfYear = more() ? reader.readByte() : 1;
+    final total = more() && reader.readBool() ? reader.readInt() : null;
     return RecurringTransaction(
       id: id,
       title: title,
       amount: amount,
       type: type,
-      category: TransactionCategory.byId(reader.readString(), type),
-      dayOfMonth: reader.readByte(),
-      startMonth: DateTime.fromMillisecondsSinceEpoch(reader.readInt()),
-      active: reader.readBool(),
-      // v2: ID dompet (opsional; data lama tidak punya).
-      walletId: reader.availableBytes > 0 && reader.readBool()
-          ? reader.readString()
-          : null,
+      category: category,
+      dayOfMonth: dayOfMonth,
+      startMonth: startMonth,
+      active: active,
+      walletId: walletId,
+      frequency: frequency,
+      weekday: weekday,
+      monthOfYear: monthOfYear,
+      totalOccurrences: total,
     );
   }
 
@@ -47,5 +62,11 @@ class RecurringAdapter extends TypeAdapter<RecurringTransaction> {
       ..writeBool(obj.active)
       ..writeBool(obj.walletId != null);
     if (obj.walletId case final id?) writer.writeString(id);
+    writer
+      ..writeString(obj.frequency.name)
+      ..writeByte(obj.weekday)
+      ..writeByte(obj.monthOfYear)
+      ..writeBool(obj.totalOccurrences != null);
+    if (obj.totalOccurrences case final n?) writer.writeInt(n);
   }
 }

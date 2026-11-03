@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../domain/services/reminder_planner.dart';
+import '../../../debts/presentation/providers/debt_providers.dart';
+import '../../../debts/presentation/pages/debt_pages.dart';
 import '../../../../core/theme/money_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -18,12 +21,32 @@ class NotificationsPage extends ConsumerWidget {
   const NotificationsPage({super.key});
 
   /// `true` bila transaksi rutin [e] sudah dicatat di bulan jatuh temponya.
+  /// ID utang/piutang bila [e] pengingat utang/piutang.
+  static String? _debtId(NotificationEntry e) =>
+      e.recurringId?.startsWith(debtReminderPrefix) ?? false
+      ? e.recurringId!.substring(debtReminderPrefix.length)
+      : null;
+
   static bool _isRecorded(WidgetRef ref, NotificationEntry e) {
     final due = e.dueDate;
     if (e.recurringId == null || due == null) return false;
-    return ref
-        .watch(transactionsProvider)
-        .any(
+    // Utang/piutang: "selesai" bila sudah lunas.
+    if (_debtId(e) case final id?) {
+      return ref
+              .watch(debtsProvider)
+              .where((d) => d.id == id)
+              .firstOrNull
+              ?.isSettled ??
+          true;
+    }
+    final transactions = ref.watch(transactionsProvider);
+    final recurring = ref
+        .watch(recurringProvider)
+        .where((r) => r.id == e.recurringId)
+        .firstOrNull;
+    // Template sudah dihapus → cocokkan per bulan saja.
+    return recurring?.isRecordedIn(transactions, due) ??
+        transactions.any(
           (t) => t.recurringId == e.recurringId && t.date.isSameMonthAs(due),
         );
   }
@@ -34,6 +57,16 @@ class NotificationsPage extends ConsumerWidget {
     NotificationEntry e,
   ) async {
     await ref.read(notificationInboxProvider.notifier).markRead(e.id);
+    if (_debtId(e) case final id? when context.mounted) {
+      if (ref.read(debtsProvider).any((d) => d.id == id)) {
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => DebtDetailPage(debtId: id)),
+        );
+      } else {
+        showAppSnack(context, 'Catatan utang/piutang ini sudah dihapus.');
+      }
+      return;
+    }
     final due = e.dueDate;
     if (e.recurringId == null || due == null || !context.mounted) return;
 
@@ -53,6 +86,7 @@ class NotificationsPage extends ConsumerWidget {
       context,
       month: due.firstOfMonth,
       recurring: recurring,
+      occurrenceDate: due,
     );
   }
 
@@ -180,7 +214,11 @@ class NotificationsPage extends ConsumerWidget {
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                           ),
-                          if (isReminder) _StatusChip(recorded: recorded),
+                          if (isReminder)
+                            _StatusChip(
+                              recorded: recorded,
+                              debt: _debtId(e) != null,
+                            ),
                         ],
                       ),
                     ],
@@ -194,9 +232,12 @@ class NotificationsPage extends ConsumerWidget {
 }
 
 class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.recorded});
+  const _StatusChip({required this.recorded, this.debt = false});
 
   final bool recorded;
+
+  /// Pengingat utang/piutang: label Lunas / Belum lunas.
+  final bool debt;
 
   @override
   Widget build(BuildContext context) {
@@ -208,7 +249,12 @@ class _StatusChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
-        recorded ? 'Sudah dicatat' : 'Belum dicatat',
+        switch ((debt, recorded)) {
+          (true, true) => 'Lunas',
+          (true, false) => 'Belum lunas',
+          (false, true) => 'Sudah dicatat',
+          (false, false) => 'Belum dicatat',
+        },
         style: TextStyle(
           color: color,
           fontSize: 11,

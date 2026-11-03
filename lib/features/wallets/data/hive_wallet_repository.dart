@@ -37,6 +37,7 @@ class HiveWalletRepository implements WalletRepository {
     'amount': t.amount,
     'date': t.date.millisecondsSinceEpoch,
     'note': t.note,
+    'debtId': t.debtId,
   };
 
   static Transfer transferFromMap(Map<dynamic, dynamic> m) => Transfer(
@@ -46,6 +47,7 @@ class HiveWalletRepository implements WalletRepository {
     amount: (m['amount'] as num).toDouble(),
     date: DateTime.fromMillisecondsSinceEpoch(m['date'] as int),
     note: m['note'] as String? ?? '',
+    debtId: m['debtId'] as String?,
   );
 
   @override

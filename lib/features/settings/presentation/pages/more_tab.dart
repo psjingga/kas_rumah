@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../debts/presentation/pages/debt_pages.dart';
 import '../../../wallets/presentation/pages/wallet_pages.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -38,9 +39,15 @@ class MoreTab extends ConsumerWidget {
           onTap: () => _push(context, const WalletsPage()),
         ),
         ListTile(
+          leading: const Icon(Icons.handshake_outlined),
+          title: const Text('Utang & Piutang'),
+          subtitle: const Text('Pinjam & meminjamkan uang'),
+          onTap: () => _push(context, const DebtsPage()),
+        ),
+        ListTile(
           leading: const Icon(Icons.event_repeat),
           title: const Text('Transaksi Rutin'),
-          subtitle: const Text('Gaji, tagihan, cicilan tiap bulan'),
+          subtitle: const Text('Gaji, tagihan, cicilan: mingguan s/d tahunan'),
           onTap: () => _push(context, const RecurringPage()),
         ),
         ListTile(

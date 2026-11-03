@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../domain/services/reminder_planner.dart';
+import '../../debts/presentation/providers/debt_providers.dart';
+import '../../debts/presentation/pages/debt_pages.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/month.dart';
@@ -23,6 +26,19 @@ Future<void> openFromNotification(
   if (navigator == null) return;
 
   final p = PlannedReminder.parsePayload(payload);
+
+  // Pengingat utang/piutang → buka detailnya.
+  if (p != null && p.recurringId.startsWith(debtReminderPrefix)) {
+    final id = p.recurringId.substring(debtReminderPrefix.length);
+    final exists = container.read(debtsProvider).any((d) => d.id == id);
+    await navigator.push(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            exists ? DebtDetailPage(debtId: id) : const NotificationsPage(),
+      ),
+    );
+    return;
+  }
   final recurring = p == null
       ? null
       : container
@@ -31,13 +47,8 @@ Future<void> openFromNotification(
             .firstOrNull;
   final recorded =
       p != null &&
-      container
-          .read(transactionsProvider)
-          .any(
-            (t) =>
-                t.recurringId == p.recurringId &&
-                t.date.isSameMonthAs(p.dueDate),
-          );
+      recurring != null &&
+      recurring.isRecordedIn(container.read(transactionsProvider), p.dueDate);
 
   if (p != null && recurring != null && !recorded) {
     await navigator.push(
@@ -45,6 +56,7 @@ Future<void> openFromNotification(
         builder: (_) => TransactionFormPage(
           month: p.dueDate.firstOfMonth,
           recurring: recurring,
+          occurrenceDate: p.dueDate,
         ),
       ),
     );

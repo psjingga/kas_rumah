@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../widgets/receipt_widgets.dart';
 import '../../../wallets/presentation/widgets/wallet_widgets.dart';
 import '../../../wallets/presentation/providers/wallet_providers.dart';
 import '../../../wallets/domain/wallet.dart';
@@ -29,12 +30,17 @@ class TransactionFormPage extends ConsumerStatefulWidget {
     required this.month,
     this.initial,
     this.recurring,
+    this.occurrenceDate,
   }) : assert(initial == null || recurring == null);
 
   /// Bulan yang sedang dilihat; menentukan tanggal awal.
   final DateTime month;
   final Transaction? initial;
   final RecurringTransaction? recurring;
+
+  /// Jatuh tempo yang dicatat (mode catat rutin), mis. Senin tertentu untuk
+  /// rutin mingguan. `null` = jatuh tempo di [month].
+  final DateTime? occurrenceDate;
 
   @override
   ConsumerState<TransactionFormPage> createState() =>
@@ -50,6 +56,8 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   late TransactionCategory _category;
   late DateTime _date;
   late String _walletId;
+  late final TextEditingController _noteController;
+  String? _photoPath;
 
   /// Mode tambah: simpan juga sebagai transaksi rutin bulanan.
   var _repeatMonthly = false;
@@ -77,6 +85,8 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     final now = ref.read(clockProvider)();
 
     _titleController = TextEditingController(text: t?.title ?? r?.title);
+    _noteController = TextEditingController(text: t?.note);
+    _photoPath = t?.photoPath;
     final amount = t?.amount ?? r?.amount;
     _amountController = TextEditingController(
       text: amount == null ? null : Fmt.thousands(amount),
@@ -89,6 +99,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
         (t == null ? ref.read(defaultWalletProvider).id : Wallet.mainId);
     _date =
         t?.date ??
+        widget.occurrenceDate ??
         r?.dueDate(widget.month) ??
         (widget.month.isSameMonthAs(now)
             ? DateUtils.dateOnly(now)
@@ -98,6 +109,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   @override
   void dispose() {
     _titleController.dispose();
+    _noteController.dispose();
     _amountController.dispose();
     super.dispose();
   }
@@ -152,6 +164,8 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
             category: _category,
             date: _date,
             walletId: _walletId,
+            note: _noteController.text.trim(),
+            photoPath: () => _photoPath,
           ),
         );
       } else {
@@ -178,6 +192,8 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
           date: _date,
           recurringId: recurringId,
           walletId: _walletId,
+          note: _noteController.text,
+          photoPath: _photoPath,
         );
       }
 
@@ -257,6 +273,24 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                 ),
                 child: Text(Fmt.date(_date)),
               ),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _noteController,
+              minLines: 1,
+              maxLines: 4,
+              maxLength: 200,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Catatan (opsional)',
+                hintText: 'Mis. beli di pasar, untuk acara keluarga',
+                prefixIcon: Icon(Icons.sticky_note_2_outlined),
+              ),
+            ),
+            const SizedBox(height: 8),
+            ReceiptPhotoField(
+              path: _photoPath,
+              onChanged: (p) => setState(() => _photoPath = p),
             ),
             const SizedBox(height: 8),
             if (linked != null)

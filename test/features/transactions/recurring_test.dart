@@ -108,7 +108,7 @@ void main() {
     test('muncul sebagai belum dicatat, hilang setelah dicatat', () async {
       final c = _container(recurring: [listrik()]);
       final notifier = c.read(transactionsProvider.notifier);
-      expect(c.read(pendingRecurringProvider).single.id, 'listrik');
+      expect(c.read(pendingRecurringProvider).single.recurring.id, 'listrik');
 
       // Nominal khusus bulan ini berbeda dari default.
       final t = await notifier.recordRecurring(
@@ -156,10 +156,7 @@ void main() {
       final c = _container(recurring: [listrik(), gaji]);
       await c
           .read(transactionsProvider.notifier)
-          .recordAllRecurring(
-            c.read(pendingRecurringProvider),
-            DateTime(2026, 11),
-          );
+          .recordAllRecurring(c.read(pendingRecurringProvider));
       expect(c.read(pendingRecurringProvider), isEmpty);
       expect(c.read(balanceProvider), 8000000 - 450000);
     });
@@ -174,7 +171,7 @@ void main() {
 
       await notifier.save(listrik().copyWith(amount: 500000));
       expect(repo.getAll().single.amount, 500000);
-      expect(c.read(pendingRecurringProvider).single.amount, 500000);
+      expect(c.read(pendingRecurringProvider).single.recurring.amount, 500000);
 
       await notifier.save(listrik().copyWith(active: false));
       expect(c.read(pendingRecurringProvider), isEmpty);

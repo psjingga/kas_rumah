@@ -44,6 +44,14 @@ class _RecurringFormPageState extends ConsumerState<RecurringFormPage> {
       widget.initial?.category ??
       ref.read(categoriesOfTypeProvider(_type)).first;
   late var _day = widget.initial?.dayOfMonth ?? 1;
+  late var _frequency =
+      widget.initial?.frequency ?? RecurrenceFrequency.monthly;
+  late var _weekday = widget.initial?.weekday ?? DateTime.monday;
+  late var _monthOfYear = widget.initial?.monthOfYear ?? 1;
+  late var _installment = widget.initial?.isInstallment ?? false;
+  late final _countController = TextEditingController(
+    text: widget.initial?.totalOccurrences?.toString() ?? '12',
+  );
   late var _active = widget.initial?.active ?? true;
   late var _walletId = widget.initial == null
       ? ref.read(defaultWalletProvider).id
@@ -54,8 +62,41 @@ class _RecurringFormPageState extends ConsumerState<RecurringFormPage> {
   void dispose() {
     _titleController.dispose();
     _amountController.dispose();
+    _countController.dispose();
     super.dispose();
   }
+
+  /// Jumlah kali bayar bila cicilan; `null` = tanpa akhir.
+  int? get _total =>
+      _installment ? int.tryParse(_countController.text.trim()) : null;
+
+  /// Pratinjau template dengan isian saat ini (untuk keterangan cicilan).
+  RecurringTransaction get _preview => RecurringTransaction(
+    id: '',
+    title: '',
+    amount: 1,
+    type: _type,
+    category: _category,
+    dayOfMonth: _day,
+    startMonth: widget.initial?.startMonth ?? widget.startMonth,
+    frequency: _frequency,
+    weekday: _weekday,
+    monthOfYear: _monthOfYear,
+    totalOccurrences: (_total ?? 0) > 0 ? _total : null,
+  );
+
+  Widget _dayDropdown(String label) => DropdownButtonFormField<int>(
+    initialValue: _day,
+    decoration: InputDecoration(
+      labelText: label,
+      helperText: 'Tanggal 29–31 memakai akhir bulan bila tidak ada',
+    ),
+    items: [
+      for (var d = 1; d <= 31; d++)
+        DropdownMenuItem(value: d, child: Text('Tanggal $d')),
+    ],
+    onChanged: (d) => setState(() => _day = d ?? _day),
+  );
 
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
@@ -77,6 +118,10 @@ class _RecurringFormPageState extends ConsumerState<RecurringFormPage> {
             dayOfMonth: _day,
             active: _active,
             walletId: _walletId,
+            frequency: _frequency,
+            weekday: _weekday,
+            monthOfYear: _monthOfYear,
+            totalOccurrences: () => _total,
           ),
         );
       } else {
@@ -88,6 +133,10 @@ class _RecurringFormPageState extends ConsumerState<RecurringFormPage> {
           dayOfMonth: _day,
           startMonth: widget.startMonth,
           walletId: _walletId,
+          frequency: _frequency,
+          weekday: _weekday,
+          monthOfYear: _monthOfYear,
+          totalOccurrences: _total,
         );
       }
       if (mounted) Navigator.of(context).pop(true);
@@ -168,19 +217,83 @@ class _RecurringFormPageState extends ConsumerState<RecurringFormPage> {
               onChanged: (c) => setState(() => _category = c),
             ),
             const SizedBox(height: 16),
-            DropdownButtonFormField<int>(
-              initialValue: _day,
-              decoration: const InputDecoration(
-                labelText: 'Tanggal tiap bulan',
-                helperText: 'Tanggal 29–31 memakai akhir bulan bila tidak ada',
-                prefixIcon: Icon(Icons.event_outlined),
-              ),
-              items: [
-                for (var d = 1; d <= 31; d++)
-                  DropdownMenuItem(value: d, child: Text('Tanggal $d')),
+            // Jadwal: mingguan / bulanan / tahunan.
+            SegmentedButton<RecurrenceFrequency>(
+              showSelectedIcon: false,
+              segments: [
+                for (final f in RecurrenceFrequency.values)
+                  ButtonSegment(value: f, label: Text(f.label)),
               ],
-              onChanged: (d) => setState(() => _day = d ?? _day),
+              selected: {_frequency},
+              onSelectionChanged: (s) => setState(() => _frequency = s.first),
             ),
+            const SizedBox(height: 16),
+            switch (_frequency) {
+              RecurrenceFrequency.weekly => DropdownButtonFormField<int>(
+                initialValue: _weekday,
+                decoration: const InputDecoration(labelText: 'Setiap hari'),
+                items: [
+                  for (var d = 1; d <= 7; d++)
+                    DropdownMenuItem(
+                      value: d,
+                      child: Text(RecurringTransaction.weekdayName(d)),
+                    ),
+                ],
+                onChanged: (d) => setState(() => _weekday = d ?? _weekday),
+              ),
+              RecurrenceFrequency.monthly => _dayDropdown('Tanggal tiap bulan'),
+              RecurrenceFrequency.yearly => Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<int>(
+                      initialValue: _monthOfYear,
+                      decoration: const InputDecoration(labelText: 'Bulan'),
+                      items: [
+                        for (var m = 1; m <= 12; m++)
+                          DropdownMenuItem(
+                            value: m,
+                            child: Text(RecurringTransaction.monthName(m)),
+                          ),
+                      ],
+                      onChanged: (m) =>
+                          setState(() => _monthOfYear = m ?? _monthOfYear),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(child: _dayDropdown('Tanggal')),
+                ],
+              ),
+            },
+            const SizedBox(height: 8),
+            // Cicilan: berhenti sendiri setelah N kali.
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Cicilan / ada batas waktu'),
+              subtitle: const Text('Berhenti otomatis setelah beberapa kali'),
+              value: _installment,
+              onChanged: (v) => setState(() => _installment = v),
+            ),
+            if (_installment)
+              TextFormField(
+                controller: _countController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Jumlah kali bayar',
+                  suffixText: 'kali',
+                  helperText: switch (_preview.lastOccurrence) {
+                    final last? => 'Lunas setelah ${Fmt.date(last)}',
+                    null => null,
+                  },
+                ),
+                onChanged: (_) => setState(() {}),
+                validator: (v) {
+                  final n = int.tryParse(v?.trim() ?? '');
+                  if (n == null || n < 1) return 'Isi minimal 1';
+                  if (n > 600) return 'Maksimal 600';
+                  return null;
+                },
+              ),
             const SizedBox(height: 16),
             WalletField(
               value: _walletId,

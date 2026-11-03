@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../../debts/domain/debt.dart';
+import '../../debts/data/hive_debt_repository.dart';
 import '../../wallets/domain/wallet.dart';
 import '../../wallets/data/hive_wallet_repository.dart';
 import 'package:intl/intl.dart';
@@ -27,6 +29,7 @@ typedef BackupSummary = ({
   int goals,
   int wallets,
   int transfers,
+  int debts,
 });
 
 /// Membuat & memulihkan backup lengkap (JSON) serta ekspor CSV.
@@ -43,6 +46,7 @@ class BackupService {
     required this.goals,
     required this.reminderSettings,
     required this.wallets,
+    required this.debts,
   });
 
   final TransactionRepository transactions;
@@ -52,11 +56,12 @@ class BackupService {
   final GoalRepository goals;
   final ReminderSettingsRepository reminderSettings;
   final WalletRepository wallets;
+  final DebtRepository debts;
 
   static const _app = 'keuangan_rumah_tangga';
 
-  /// 2 = menambahkan dompet & transfer.
-  static const formatVersion = 2;
+  /// 2 = dompet & transfer; 3 = utang-piutang, frekuensi rutin, catatan.
+  static const formatVersion = 3;
 
   // ---------- Backup JSON ----------
 
@@ -81,6 +86,7 @@ class BackupService {
         for (final t in wallets.getTransfers())
           HiveWalletRepository.transferToMap(t),
       ],
+      'debts': [for (final d in debts.getAll()) HiveDebtRepository.toMap(d)],
       'reminderSettings': {
         'enabled': r.enabled,
         'daysBefore': r.daysBefore,
@@ -104,6 +110,7 @@ class BackupService {
       goals: d.goals.length,
       wallets: d.wallets.length,
       transfers: d.transfers.length,
+      debts: d.debts.length,
     );
   }
 
@@ -119,6 +126,7 @@ class BackupService {
     await goals.replaceAll(d.goals);
     await wallets.replaceWallets(d.wallets);
     await wallets.replaceTransfers(d.transfers);
+    await debts.replaceAll(d.debts);
     if (d.reminderSettings case final s?) await reminderSettings.save(s);
     return inspect(json);
   }
@@ -132,7 +140,7 @@ class BackupService {
         v.contains(RegExp(r'[;"\n]')) ? '"${v.replaceAll('"', '""')}"' : v;
     final date = DateFormat('yyyy-MM-dd');
     return [
-      'Tanggal;Jenis;Kategori;Judul;Nominal',
+      'Tanggal;Jenis;Kategori;Judul;Nominal;Catatan',
       for (final t in list)
         [
           date.format(t.date),
@@ -140,6 +148,7 @@ class BackupService {
           cell(t.category.label),
           cell(t.title),
           t.amount.toStringAsFixed(0),
+          cell(t.note.replaceAll('\n', ' ')),
         ].join(';'),
     ].join('\n');
   }
@@ -155,6 +164,8 @@ class BackupService {
     'date': t.date.millisecondsSinceEpoch,
     'recurringId': t.recurringId,
     'walletId': t.walletId,
+    // Foto struk tidak ikut (file ada di HP); catatan ikut.
+    'note': t.note,
   };
 
   static Map<String, Object?> _recurringToMap(RecurringTransaction r) => {
@@ -167,6 +178,10 @@ class BackupService {
     'startMonth': r.startMonth.millisecondsSinceEpoch,
     'active': r.active,
     'walletId': r.walletId,
+    'frequency': r.frequency.name,
+    'weekday': r.weekday,
+    'monthOfYear': r.monthOfYear,
+    'totalOccurrences': r.totalOccurrences,
   };
 }
 
@@ -182,6 +197,7 @@ class _Decoded {
     this.reminderSettings,
     this.wallets,
     this.transfers,
+    this.debts,
   );
 
   final DateTime exportedAt;
@@ -193,6 +209,7 @@ class _Decoded {
   final ReminderSettings? reminderSettings;
   final List<Wallet> wallets;
   final List<Transfer> transfers;
+  final List<Debt> debts;
 
   static _Decoded parse(String json) {
     final Object? root;
@@ -235,6 +252,7 @@ class _Decoded {
               date: DateTime.fromMillisecondsSinceEpoch(m['date'] as int),
               recurringId: m['recurringId'] as String?,
               walletId: m['walletId'] as String?,
+              note: m['note'] as String? ?? '',
             ),
         ],
         [
@@ -254,6 +272,12 @@ class _Decoded {
               ),
               active: m['active'] as bool? ?? true,
               walletId: m['walletId'] as String?,
+              frequency: RecurrenceFrequency.values.byName(
+                m['frequency'] as String? ?? 'monthly',
+              ),
+              weekday: m['weekday'] as int? ?? DateTime.monday,
+              monthOfYear: m['monthOfYear'] as int? ?? 1,
+              totalOccurrences: m['totalOccurrences'] as int?,
             ),
         ],
         {
@@ -280,6 +304,7 @@ class _Decoded {
           for (final m in list('transfers'))
             HiveWalletRepository.transferFromMap(m),
         ],
+        [for (final m in list('debts')) HiveDebtRepository.fromMap(m)],
       );
     } on Object catch (e) {
       // Data di dalamnya tidak lengkap / tipe salah.

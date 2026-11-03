@@ -32,13 +32,20 @@ class RecurringPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final items = ref.watch(recurringProvider);
-    final active = items.where((r) => r.active);
+    final transactions = ref.watch(transactionsProvider);
+    // Cicilan yang sudah lunas tidak dihitung lagi.
+    final active = items.where(
+      (r) =>
+          r.active &&
+          (r.totalOccurrences == null ||
+              r.recordedCount(transactions) < r.totalOccurrences!),
+    );
     final income = active
         .where((r) => r.isIncome)
-        .fold(0.0, (sum, r) => sum + r.amount);
+        .fold(0.0, (sum, r) => sum + r.monthlyEquivalent);
     final expense = active
         .where((r) => !r.isIncome)
-        .fold(0.0, (sum, r) => sum + r.amount);
+        .fold(0.0, (sum, r) => sum + r.monthlyEquivalent);
 
     return Scaffold(
       appBar: AppBar(
@@ -100,6 +107,7 @@ class RecurringPage extends ConsumerWidget {
                   for (final r in items)
                     _RecurringTile(
                       recurring: r,
+                      recordedCount: r.recordedCount(transactions),
                       onTap: () => _openForm(context, ref, r),
                     ),
                 ],
@@ -133,9 +141,16 @@ class _TotalRow extends StatelessWidget {
 }
 
 class _RecurringTile extends StatelessWidget {
-  const _RecurringTile({required this.recurring, required this.onTap});
+  const _RecurringTile({
+    required this.recurring,
+    required this.recordedCount,
+    required this.onTap,
+  });
 
   final RecurringTransaction recurring;
+
+  /// Berapa kali sudah dicatat (untuk progres cicilan).
+  final int recordedCount;
   final VoidCallback onTap;
 
   @override
@@ -152,8 +167,12 @@ class _RecurringTile extends StatelessWidget {
         title: Text(r.title, maxLines: 1, overflow: TextOverflow.ellipsis),
         subtitle: Text(
           [
-            'Tiap tgl ${r.dayOfMonth}',
+            r.scheduleLabel,
             r.category.label,
+            if (r.totalOccurrences case final total?)
+              recordedCount >= total
+                  ? 'Lunas ✓'
+                  : 'Cicilan $recordedCount/$total',
             if (!r.active) 'Nonaktif',
           ].join(' · '),
         ),
