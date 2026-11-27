@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/theme/app_theme.dart';
 import '../features/settings/presentation/pages/app_lock.dart';
 import '../features/settings/presentation/pages/onboarding_page.dart';
 import '../features/settings/presentation/providers/settings_providers.dart';
@@ -10,17 +11,6 @@ import 'home_shell.dart';
 /// Navigator utama, agar notifikasi yang diketuk bisa membuka halaman dari
 /// luar pohon widget (lihat `main.dart`).
 final appNavigatorKey = GlobalKey<NavigatorState>();
-
-const _seed = Color(0xFF00796B);
-
-ThemeData _theme(Brightness brightness) => ThemeData(
-  colorScheme: ColorScheme.fromSeed(seedColor: _seed, brightness: brightness),
-  fontFamily: 'PlusJakartaSans',
-  inputDecorationTheme: const InputDecorationTheme(
-    border: OutlineInputBorder(),
-  ),
-  cardTheme: const CardThemeData(margin: EdgeInsets.zero),
-);
 
 class KeuanganApp extends ConsumerWidget {
   const KeuanganApp({super.key});
@@ -31,8 +21,8 @@ class KeuanganApp extends ConsumerWidget {
       title: 'Kas Rumah',
       debugShowCheckedModeBanner: false,
       navigatorKey: appNavigatorKey,
-      theme: _theme(Brightness.light),
-      darkTheme: _theme(Brightness.dark),
+      theme: buildAppTheme(Brightness.light),
+      darkTheme: buildAppTheme(Brightness.dark),
       themeMode: ref.watch(themeModeProvider),
       // Bahasa Indonesia untuk date picker & teks bawaan Material.
       locale: const Locale('id', 'ID'),

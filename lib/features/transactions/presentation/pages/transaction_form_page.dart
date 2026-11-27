@@ -8,7 +8,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/app_palette.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../../core/widgets/warm_widgets.dart';
 import '../../../../core/utils/month.dart';
 import '../../domain/entities/recurring_transaction.dart';
 import '../../domain/entities/transaction.dart';
@@ -220,41 +223,62 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       _ => 'Tambah Transaksi',
     };
 
+    final p = context.palette;
+
     return Scaffold(
       appBar: AppBar(title: Text(title)),
+      // Tombol Simpan selalu terlihat di bawah.
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+          child: SaveButton(saving: _saving, onPressed: _submit),
+        ),
+      ),
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
           children: [
             if (linked != null) ...[
               _RecurringInfo(recurring: linked),
               const SizedBox(height: 16),
             ],
             TypeSelector(value: _type, onChanged: _changeType),
+            const SizedBox(height: 16),
+            // Nominal besar di tengah + tombol tambah cepat.
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                child: Column(
+                  children: [
+                    AmountField(
+                      controller: _amountController,
+                      large: true,
+                      helperText: linked == null
+                          ? null
+                          : 'Nominal khusus bulan ini, default '
+                                '${Fmt.rupiah(linked.amount)}',
+                    ),
+                    const SizedBox(height: 8),
+                    QuickAmountChips(controller: _amountController),
+                  ],
+                ),
+              ),
+            ),
             const SizedBox(height: 20),
             TitleAutocompleteField(
               controller: _titleController,
               suggestions: ref.watch(titleSuggestionsProvider(_type)),
               onSelected: _applySuggestion,
             ),
-            const SizedBox(height: 16),
-            AmountField(
-              controller: _amountController,
-              helperText: linked == null
-                  ? null
-                  : 'Nominal khusus bulan ini, default '
-                        '${Fmt.rupiah(linked.amount)}',
-            ),
-            const SizedBox(height: 8),
-            QuickAmountChips(controller: _amountController),
-            const SizedBox(height: 16),
-            CategoryField(
+            const SizedBox(height: 20),
+            const SectionLabel('Kategori'),
+            CategoryGrid(
               type: _type,
               value: _category,
               onChanged: (c) => setState(() => _category = c),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             WalletField(
               label: _type == TransactionType.income
                   ? 'Masuk ke dompet'
@@ -262,19 +286,20 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
               value: _walletId,
               onChanged: (w) => setState(() => _walletId = w),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             InkWell(
               onTap: _pickDate,
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(AppRadius.box),
               child: InputDecorator(
                 decoration: const InputDecoration(
                   labelText: 'Tanggal',
-                  prefixIcon: Icon(Icons.calendar_today_outlined),
+                  prefixIcon: Icon(Icons.calendar_today_rounded),
+                  suffixIcon: Icon(Icons.expand_more_rounded),
                 ),
                 child: Text(Fmt.date(_date)),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             TextFormField(
               controller: _noteController,
               minLines: 1,
@@ -290,13 +315,14 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
             const SizedBox(height: 8),
             ReceiptPhotoField(
               path: _photoPath,
-              onChanged: (p) => setState(() => _photoPath = p),
+              onChanged: (path) => setState(() => _photoPath = path),
             ),
             const SizedBox(height: 8),
             if (linked != null)
               CheckboxListTile(
                 contentPadding: EdgeInsets.zero,
                 controlAffinity: ListTileControlAffinity.leading,
+                activeColor: p.primary,
                 title: const Text('Jadikan nominal default'),
                 subtitle: const Text(
                   'Bulan-bulan berikutnya memakai nominal ini',
@@ -315,8 +341,6 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                 value: _repeatMonthly,
                 onChanged: (v) => setState(() => _repeatMonthly = v),
               ),
-            const SizedBox(height: 20),
-            SaveButton(saving: _saving, onPressed: _submit),
           ],
         ),
       ),
@@ -334,14 +358,14 @@ class _RecurringInfo extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: scheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.box),
       ),
       child: Row(
         children: [
-          Icon(Icons.event_repeat, color: scheme.onSecondaryContainer),
+          Icon(Icons.event_repeat_rounded, color: scheme.onSecondaryContainer),
           const SizedBox(width: 10),
           Expanded(
             child: Text(

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/app_palette.dart';
+import '../../../../core/widgets/warm_widgets.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../domain/entities/reminder_settings.dart';
 import '../providers/reminder_providers.dart';
@@ -59,75 +61,99 @@ class ReminderSettingsPage extends ConsumerWidget {
     final s = ref.watch(reminderSettingsProvider);
     final upcoming = ref.watch(plannedRemindersProvider).take(5).toList();
     final outline = Theme.of(context).colorScheme.outline;
+    final p = context.palette;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Pengingat')),
       body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [
           const _PermissionBanner(),
-          SwitchListTile(
-            secondary: const Icon(Icons.notifications_active_outlined),
-            title: const Text('Ingatkan transaksi rutin'),
-            subtitle: const Text(
-              'Notifikasi sebelum jatuh tempo, selama belum dicatat',
+          const SectionLabel('Tagihan & rutin'),
+          _Group([
+            SwitchListTile(
+              secondary: IconTile(
+                icon: Icons.notifications_active_rounded,
+                color: p.primary,
+              ),
+              title: const Text('Ingatkan transaksi rutin'),
+              subtitle: const Text(
+                'Notifikasi sebelum jatuh tempo, selama belum dicatat',
+              ),
+              value: s.enabled,
+              onChanged: (on) => _toggle(context, ref, on),
             ),
-            value: s.enabled,
-            onChanged: (on) => _toggle(context, ref, on),
-          ),
-          ListTile(
-            enabled: s.enabled,
-            leading: const Icon(Icons.event_outlined),
-            title: const Text('Kapan diingatkan'),
-            trailing: DropdownButton<int>(
-              value: s.daysBefore,
-              underline: const SizedBox.shrink(),
-              onChanged: s.enabled
-                  ? (d) => ref
-                        .read(reminderSettingsProvider.notifier)
-                        .update(s.copyWith(daysBefore: d))
-                  : null,
-              items: [
-                for (final d in ReminderSettings.daysBeforeOptions)
-                  DropdownMenuItem(
-                    value: d,
-                    child: Text(ReminderSettings.daysBeforeLabel(d)),
+            ListTile(
+              enabled: s.enabled,
+              leading: IconTile(icon: Icons.event_rounded, color: p.info),
+              title: const Text('Kapan diingatkan'),
+              trailing: DropdownButton<int>(
+                value: s.daysBefore,
+                underline: const SizedBox.shrink(),
+                borderRadius: BorderRadius.circular(14),
+                onChanged: s.enabled
+                    ? (d) => ref
+                          .read(reminderSettingsProvider.notifier)
+                          .update(s.copyWith(daysBefore: d))
+                    : null,
+                items: [
+                  for (final d in ReminderSettings.daysBeforeOptions)
+                    DropdownMenuItem(
+                      value: d,
+                      child: Text(ReminderSettings.daysBeforeLabel(d)),
+                    ),
+                ],
+              ),
+            ),
+            ListTile(
+              enabled: s.enabled,
+              leading: IconTile(
+                icon: Icons.schedule_rounded,
+                color: p.inkMuted,
+              ),
+              title: const Text('Jam pengingat'),
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: p.surfaceMuted,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  s.timeLabel,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
                   ),
-              ],
+                ),
+              ),
+              onTap: () => _pickTime(context, ref),
             ),
-          ),
-          ListTile(
-            enabled: s.enabled,
-            leading: const Icon(Icons.schedule),
-            title: const Text('Jam pengingat'),
-            trailing: Text(
-              s.timeLabel,
-              style: Theme.of(context).textTheme.titleMedium,
+          ]),
+          const SizedBox(height: 20),
+          const SectionLabel('Anggaran'),
+          _Group([
+            SwitchListTile(
+              secondary: IconTile(
+                icon: Icons.pie_chart_rounded,
+                color: p.warning,
+              ),
+              title: const Text('Peringatan anggaran'),
+              subtitle: const Text(
+                'Notifikasi saat anggaran kategori terpakai 80% dan 100%',
+              ),
+              value: s.budgetAlerts,
+              onChanged: (on) => ref
+                  .read(reminderSettingsProvider.notifier)
+                  .update(s.copyWith(budgetAlerts: on)),
             ),
-            onTap: () => _pickTime(context, ref),
-          ),
-          SwitchListTile(
-            secondary: const Icon(Icons.pie_chart_outline),
-            title: const Text('Peringatan anggaran'),
-            subtitle: const Text(
-              'Notifikasi saat anggaran kategori terpakai 80% dan 100%',
-            ),
-            value: s.budgetAlerts,
-            onChanged: (on) => ref
-                .read(reminderSettingsProvider.notifier)
-                .update(s.copyWith(budgetAlerts: on)),
-          ),
-          const Divider(),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Text(
-              'Jadwal terdekat',
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-          ),
+          ]),
+          const SizedBox(height: 20),
+          const SectionLabel('Jadwal terdekat'),
           if (upcoming.isEmpty)
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
               child: Text(
                 s.enabled
                     ? 'Tidak ada pengingat terjadwal. Pengingat hanya dibuat '
@@ -137,21 +163,70 @@ class ReminderSettingsPage extends ConsumerWidget {
               ),
             )
           else
-            for (final r in upcoming)
-              ListTile(
-                dense: true,
-                leading: const Icon(Icons.notifications_none),
-                title: Text(r.title),
-                subtitle: Text(Fmt.dateTime(r.fireAt)),
-              ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: OutlinedButton.icon(
-              onPressed: () => _sendTest(context, ref),
-              icon: const Icon(Icons.send_outlined),
-              label: const Text('Kirim notifikasi uji'),
-            ),
+            _Group([
+              for (final r in upcoming)
+                ListTile(
+                  leading: Container(
+                    width: 44,
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    decoration: BoxDecoration(
+                      color: p.primarySoft,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          Fmt.shortMonth(r.fireAt).toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: p.primary,
+                          ),
+                        ),
+                        Text(
+                          '${r.fireAt.day}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            height: 1.1,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  title: Text(r.title),
+                  subtitle: Text(Fmt.dateTime(r.fireAt)),
+                ),
+            ]),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: () => _sendTest(context, ref),
+            icon: const Icon(Icons.send_rounded),
+            label: const Text('Kirim notifikasi uji'),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Kartu berisi beberapa baris pengaturan dengan garis pemisah.
+class _Group extends StatelessWidget {
+  const _Group(this.children);
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          for (final (i, w) in children.indexed) ...[
+            if (i > 0) const Divider(indent: 72, endIndent: 16),
+            w,
+          ],
         ],
       ),
     );
@@ -196,17 +271,17 @@ class _PermissionBannerState extends ConsumerState<_PermissionBanner> {
       builder: (context, snap) {
         if (snap.data != false) return const SizedBox.shrink();
         return Card(
-          margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+          margin: const EdgeInsets.only(bottom: 16),
           color: scheme.errorContainer,
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
                     Icon(
-                      Icons.notifications_off_outlined,
+                      Icons.notifications_off_rounded,
                       color: scheme.onErrorContainer,
                     ),
                     const SizedBox(width: 8),

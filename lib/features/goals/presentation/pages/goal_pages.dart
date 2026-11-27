@@ -4,7 +4,10 @@ import '../../../wallets/presentation/providers/wallet_providers.dart';
 import '../../../../core/theme/money_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/app_palette.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../../core/widgets/warm_widgets.dart';
 import '../../../transactions/domain/entities/transaction_category.dart';
 import '../../../transactions/presentation/providers/transaction_providers.dart';
 import '../../../transactions/presentation/widgets/form_fields.dart';
@@ -12,7 +15,6 @@ import '../../../transactions/presentation/widgets/style_picker.dart';
 import '../../../transactions/presentation/widgets/transaction_actions.dart';
 import '../../domain/savings_goal.dart';
 import '../providers/goal_providers.dart';
-import 'goals_tab.dart';
 
 /// Detail target tabungan: progres, setor/tarik, dan riwayat setoran.
 class GoalDetailPage extends ConsumerWidget {
@@ -111,17 +113,17 @@ class GoalDetailPage extends ConsumerWidget {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
         children: [
-          GoalCard(goal: goal, now: ref.read(clockProvider)()),
-          const SizedBox(height: 8),
+          _GoalHero(goal: goal, now: ref.read(clockProvider)()),
+          const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
                 child: FilledButton.icon(
                   onPressed: () =>
                       _deposit(context, ref, goal, withdraw: false),
-                  icon: const Icon(Icons.add),
+                  icon: const Icon(Icons.add_rounded),
                   label: const Text('Setor'),
                 ),
               ),
@@ -131,52 +133,217 @@ class GoalDetailPage extends ConsumerWidget {
                   onPressed: goal.saved <= 0
                       ? null
                       : () => _deposit(context, ref, goal, withdraw: true),
-                  icon: const Icon(Icons.remove),
+                  icon: const Icon(Icons.remove_rounded),
                   label: const Text('Tarik'),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          Text('Riwayat', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 24),
+          const SectionLabel('Riwayat setoran'),
           if (goal.deposits.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 24),
               child: Text('Belum ada setoran.', textAlign: TextAlign.center),
-            ),
-          for (final d in goal.deposits)
-            Dismissible(
-              key: ValueKey(d.id),
-              direction: DismissDirection.endToStart,
-              background: Container(
-                alignment: Alignment.centerRight,
-                padding: const EdgeInsets.only(right: 20),
-                color: Theme.of(context).colorScheme.errorContainer,
-                child: const Icon(Icons.delete_outline),
-              ),
-              onDismissed: (_) =>
-                  ref.read(goalsProvider.notifier).removeDeposit(goal.id, d.id),
-              child: ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(
-                  d.isWithdrawal ? Icons.north_east : Icons.south_west,
-                  color: d.isWithdrawal
-                      ? context.expenseColor
-                      : context.incomeColor,
-                ),
-                title: Text(d.isWithdrawal ? 'Tarik' : 'Setor'),
-                subtitle: Text(
-                  '${Fmt.date(d.date)}'
-                  '${d.transactionId == null ? '' : ' · tercatat di transaksi'}',
-                ),
-                trailing: Text(
-                  Fmt.rupiah(d.amount.abs()),
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
+            )
+          else
+            Card(
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: [
+                  for (final (i, d) in goal.deposits.indexed) ...[
+                    if (i > 0) const Divider(indent: 68, endIndent: 16),
+                    Dismissible(
+                      key: ValueKey(d.id),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 20),
+                        color: Theme.of(context).colorScheme.errorContainer,
+                        child: const Icon(Icons.delete_outline_rounded),
+                      ),
+                      onDismissed: (_) => ref
+                          .read(goalsProvider.notifier)
+                          .removeDeposit(goal.id, d.id),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 2,
+                        ),
+                        leading: IconTile(
+                          icon: d.isWithdrawal
+                              ? Icons.north_east_rounded
+                              : Icons.south_west_rounded,
+                          color: d.isWithdrawal
+                              ? context.expenseColor
+                              : context.incomeColor,
+                        ),
+                        title: Text(d.isWithdrawal ? 'Tarik' : 'Setor'),
+                        subtitle: Text(
+                          '${Fmt.date(d.date)}'
+                          '${d.transactionId == null ? '' : ' · tercatat di transaksi'}',
+                        ),
+                        trailing: Text(
+                          '${d.isWithdrawal ? '−' : '+'} '
+                          '${Fmt.rupiah(d.amount.abs())}',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: d.isWithdrawal
+                                ? context.expenseColor
+                                : context.incomeColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
         ],
       ),
+    );
+  }
+}
+
+/// Kartu utama detail target: cincin progres, terkumpul, sisa & tenggat.
+class _GoalHero extends StatelessWidget {
+  const _GoalHero({required this.goal, required this.now});
+
+  final SavingsGoal goal;
+  final DateTime now;
+
+  @override
+  Widget build(BuildContext context) {
+    final g = goal;
+    final p = context.palette;
+    final color = g.isReached ? p.income : Color(g.colorValue);
+    final textTheme = Theme.of(context).textTheme;
+    final perMonth = g.monthlyNeeded(now);
+    final left = (g.target - g.saved).clamp(0, double.infinity).toDouble();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                SizedBox.square(
+                  dimension: 108,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(end: g.progress.clamp(0, 1).toDouble()),
+                        duration: const Duration(milliseconds: 600),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, v, _) => CircularProgressIndicator(
+                          value: v,
+                          strokeWidth: 11,
+                          strokeCap: StrokeCap.round,
+                          color: color,
+                          backgroundColor: p.surfaceMuted,
+                        ),
+                      ),
+                      Center(
+                        child: IconTile(
+                          icon: CategoryStyle.icons[g.iconKey] ?? Icons.savings,
+                          color: color,
+                          size: 46,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 18),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Terkumpul', style: textTheme.bodySmall),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          Fmt.rupiah(g.saved),
+                          style: const TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -.5,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        'dari ${Fmt.rupiah(g.target)}',
+                        style: textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '${(g.progress * 100).round()}%',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: color,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: p.surfaceMuted,
+                borderRadius: BorderRadius.circular(AppRadius.box),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _HeroStat(
+                      label: g.isReached ? 'Status' : 'Sisa',
+                      value: g.isReached ? 'Tercapai 🎉' : Fmt.rupiah(left),
+                    ),
+                  ),
+                  if (g.deadline case final d?)
+                    Expanded(
+                      child: _HeroStat(
+                        label: 'Tenggat',
+                        value: Fmt.month(d),
+                        caption: perMonth == null
+                            ? null
+                            : 'perlu ${Fmt.rupiah(perMonth)}/bulan',
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroStat extends StatelessWidget {
+  const _HeroStat({required this.label, required this.value, this.caption});
+
+  final String label;
+  final String value;
+  final String? caption;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label.toUpperCase(), style: textTheme.labelSmall),
+        const SizedBox(height: 2),
+        Text(value, style: textTheme.titleSmall),
+        if (caption case final c?) Text(c, style: textTheme.bodySmall),
+      ],
     );
   }
 }

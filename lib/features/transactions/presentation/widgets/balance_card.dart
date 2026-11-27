@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_palette.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../../core/widgets/warm_widgets.dart';
 import '../../domain/entities/finance_summary.dart';
 
 /// Kartu ringkasan: sisa saldo bulan ini besar di atas, sisa bulan lalu
@@ -12,6 +15,7 @@ class BalanceCard extends StatelessWidget {
     required this.summary,
     this.previous,
     this.scheduledNet,
+    this.header,
   });
 
   final FinanceSummary summary;
@@ -23,42 +27,66 @@ class BalanceCard extends StatelessWidget {
   /// (sudah ikut dihitung di sisa saldo). `null`/0 = tidak ada.
   final double? scheduledNet;
 
+  /// Isi di bagian atas hero (mis. pemilih bulan).
+  final Widget? header;
+
   @override
   Widget build(BuildContext context) {
-    final (background, foreground) = balanceCardColors(context);
+    final p = context.palette;
+    const foreground = Colors.white;
     final negatif = summary.balance < 0;
     final muted = TextStyle(
-      color: foreground.withValues(alpha: .8),
+      color: foreground.withValues(alpha: .85),
       fontSize: 12.5,
+      fontWeight: FontWeight.w500,
     );
 
-    return Card(
-      color: background,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Sisa Saldo',
-              style: TextStyle(color: foreground.withValues(alpha: .8)),
+    // Latar gradasi madu memenuhi lebar layar; kartu Pemasukan &
+    // Pengeluaran menumpang di tepi bawahnya.
+    return Stack(
+      children: [
+        Positioned(
+          left: 0,
+          right: 0,
+          top: 0,
+          bottom: 44,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [p.heroStart, p.heroEnd],
+              ),
+              borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(AppRadius.hero + 4),
+              ),
             ),
+          ),
+        ),
+        Column(
+          children: [
+            ?header,
             const SizedBox(height: 4),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              // Angka bergulir halus saat saldo berubah.
-              child: TweenAnimationBuilder<double>(
-                tween: Tween(end: summary.balance),
-                duration: const Duration(milliseconds: 600),
-                curve: Curves.easeOutCubic,
-                builder: (context, value, _) => Text(
-                  Fmt.rupiah(value.roundToDouble()),
-                  style: TextStyle(
-                    color: negatif ? const Color(0xFFFFCDD2) : foreground,
-                    fontSize: 32,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -.5,
+            Text('Sisa Saldo', style: muted.copyWith(fontSize: 13)),
+            const SizedBox(height: 2),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                // Angka bergulir halus saat saldo berubah.
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(end: summary.balance),
+                  duration: const Duration(milliseconds: 600),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, value, _) => Text(
+                    Fmt.rupiah(value.roundToDouble()),
+                    style: TextStyle(
+                      color: negatif ? const Color(0xFFFFE1DE) : foreground,
+                      fontSize: 34,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -.5,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
                   ),
                 ),
               ),
@@ -71,62 +99,64 @@ class BalanceCard extends StatelessWidget {
             ),
             // Sisa saldo menghitung seluruh bulan, termasuk yang terjadwal.
             if (scheduledNet case final s? when s.abs() >= 1)
-              Text(
-                'Termasuk ${Fmt.signed(s)} terjadwal setelah hari ini',
-                style: muted,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                  'Termasuk ${Fmt.signed(s)} terjadwal setelah hari ini',
+                  style: muted,
+                  textAlign: TextAlign.center,
+                ),
               ),
-            const SizedBox(height: 16),
-            // IntrinsicHeight: kedua kotak selalu sama tinggi.
-            IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    child: _Total(
-                      label: 'Pemasukan',
-                      value: summary.totalIncome,
-                      icon: Icons.south_west,
-                      change: previous == null
-                          ? null
-                          : Fmt.change(
-                                  previous!.totalIncome,
-                                  summary.totalIncome,
-                                ) ??
-                                '—',
+            const SizedBox(height: 18),
+            // IntrinsicHeight: kedua kartu selalu sama tinggi.
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: _Total(
+                        label: 'Pemasukan',
+                        value: summary.totalIncome,
+                        icon: Icons.trending_up_rounded,
+                        color: p.income,
+                        sign: '+',
+                        change: previous == null
+                            ? null
+                            : Fmt.change(
+                                    previous!.totalIncome,
+                                    summary.totalIncome,
+                                  ) ??
+                                  '—',
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _Total(
-                      label: 'Pengeluaran',
-                      value: summary.totalExpense,
-                      icon: Icons.north_east,
-                      change: previous == null
-                          ? null
-                          : Fmt.change(
-                                  previous!.totalExpense,
-                                  summary.totalExpense,
-                                ) ??
-                                '—',
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _Total(
+                        label: 'Pengeluaran',
+                        value: summary.totalExpense,
+                        icon: Icons.trending_down_rounded,
+                        color: p.expense,
+                        sign: '−',
+                        change: previous == null
+                            ? null
+                            : Fmt.change(
+                                    previous!.totalExpense,
+                                    summary.totalExpense,
+                                  ) ??
+                                  '—',
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],
         ),
-      ),
+      ],
     );
   }
-}
-
-/// Warna kartu saldo: teal penuh di mode terang, teal tua di mode gelap
-/// (teal terang terlalu menyilaukan di layar gelap).
-(Color, Color) balanceCardColors(BuildContext context) {
-  final scheme = Theme.of(context).colorScheme;
-  return scheme.brightness == Brightness.dark
-      ? (scheme.primaryContainer, scheme.onPrimaryContainer)
-      : (scheme.primary, scheme.onPrimary);
 }
 
 class _Total extends StatelessWidget {
@@ -134,62 +164,62 @@ class _Total extends StatelessWidget {
     required this.label,
     required this.value,
     required this.icon,
+    required this.color,
+    required this.sign,
     this.change,
   });
 
   final String label;
   final double value;
   final IconData icon;
+  final Color color;
+  final String sign;
 
   /// Perubahan dari bulan lalu, mis. "▲12%".
   final String? change;
 
   @override
   Widget build(BuildContext context) {
-    final onPrimary = balanceCardColors(context).$2;
+    final p = context.palette;
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
       decoration: BoxDecoration(
-        color: onPrimary.withValues(alpha: .12),
-        borderRadius: BorderRadius.circular(12),
+        color: p.surface,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: p.border.withValues(alpha: .6)),
+        boxShadow: p.cardShadow,
       ),
-      child: Row(
+      child: Column(
         children: [
-          Icon(icon, color: onPrimary, size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: onPrimary.withValues(alpha: .8),
-                    fontSize: 12,
-                  ),
-                ),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    Fmt.rupiah(value),
-                    style: TextStyle(
-                      color: onPrimary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                if (change case final c?)
-                  Text(
-                    '$c vs bln lalu',
-                    style: TextStyle(
-                      color: onPrimary.withValues(alpha: .75),
-                      fontSize: 11,
-                    ),
-                  ),
-              ],
+          IconTile(icon: icon, color: color, size: 36),
+          const SizedBox(height: 8),
+          Text(
+            label.toUpperCase(),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: .6,
+              color: p.inkMuted,
             ),
           ),
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              '$sign ${Fmt.rupiah(value)}',
+              style: TextStyle(
+                color: color,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
+          if (change case final c?)
+            Text(
+              '$c vs bln lalu',
+              style: TextStyle(color: p.inkMuted, fontSize: 11),
+            ),
         ],
       ),
     );

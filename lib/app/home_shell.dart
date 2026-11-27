@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../core/theme/app_palette.dart';
 
 import '../core/navigation/home_tab.dart';
 import '../features/budgets/presentation/pages/budgets_tab.dart';
@@ -38,36 +41,36 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     (
       title: 'Ringkasan',
       label: 'Ringkasan',
-      icon: Icons.dashboard_outlined,
-      selectedIcon: Icons.dashboard,
+      icon: Icons.grid_view_outlined,
+      selectedIcon: Icons.grid_view_rounded,
       body: SummaryTab(),
     ),
     (
       title: 'Riwayat',
       label: 'Riwayat',
       icon: Icons.receipt_long_outlined,
-      selectedIcon: Icons.receipt_long,
+      selectedIcon: Icons.receipt_long_rounded,
       body: HistoryTab(),
     ),
     (
       title: 'Anggaran',
       label: 'Anggaran',
-      icon: Icons.pie_chart_outline,
-      selectedIcon: Icons.pie_chart,
+      icon: Icons.pie_chart_outline_rounded,
+      selectedIcon: Icons.pie_chart_rounded,
       body: BudgetsTab(),
     ),
     (
       title: 'Target Tabungan',
       label: 'Tabungan',
       icon: Icons.savings_outlined,
-      selectedIcon: Icons.savings,
+      selectedIcon: Icons.savings_rounded,
       body: GoalsTab(),
     ),
     (
       title: 'Lainnya',
       label: 'Lainnya',
-      icon: Icons.menu,
-      selectedIcon: Icons.menu_open,
+      icon: Icons.more_horiz_rounded,
+      selectedIcon: Icons.more_horiz_rounded,
       body: MoreTab(),
     ),
   ];
@@ -77,19 +80,19 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     0 || 1 => FloatingActionButton.extended(
       onPressed: () =>
           openTransactionForm(context, month: ref.read(selectedMonthProvider)),
-      icon: const Icon(Icons.add),
+      icon: const Icon(Icons.add_rounded),
       label: const Text('Transaksi'),
     ),
     2 => FloatingActionButton.extended(
       onPressed: () => pickCategoryForBudget(context, ref),
-      icon: const Icon(Icons.add),
+      icon: const Icon(Icons.add_rounded),
       label: const Text('Anggaran'),
     ),
     3 => FloatingActionButton.extended(
       onPressed: () => Navigator.of(
         context,
       ).push(MaterialPageRoute<void>(builder: (_) => const GoalFormPage())),
-      icon: const Icon(Icons.add),
+      icon: const Icon(Icons.add_rounded),
       label: const Text('Target'),
     ),
     _ => null,
@@ -100,13 +103,24 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     final unread = ref.watch(unreadNotificationsProvider);
     final tab = _tabs[_index];
 
+    // Tab Ringkasan: app bar menyatu dengan hero saldo berwarna madu.
+    final hero = _index == 0;
+    final palette = context.palette;
     return Scaffold(
       appBar: AppBar(
         title: Text(tab.title),
+        backgroundColor: hero ? palette.heroStart : null,
+        foregroundColor: hero ? Colors.white : null,
+        titleTextStyle: hero
+            ? Theme.of(
+                context,
+              ).appBarTheme.titleTextStyle?.copyWith(color: Colors.white)
+            : null,
+        systemOverlayStyle: hero ? SystemUiOverlayStyle.light : null,
         actions: [
           IconButton(
             tooltip: 'Cari transaksi',
-            icon: const Icon(Icons.search),
+            icon: const Icon(Icons.search_rounded),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
                 builder: (_) => const TransactionSearchPage(),
@@ -118,7 +132,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
             icon: Badge.count(
               count: unread,
               isLabelVisible: unread > 0,
-              child: const Icon(Icons.notifications_outlined),
+              child: const Icon(Icons.notifications_none_rounded),
             ),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(

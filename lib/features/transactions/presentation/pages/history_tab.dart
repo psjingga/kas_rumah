@@ -5,6 +5,7 @@ import '../../../wallets/presentation/pages/wallet_pages.dart';
 import '../../../wallets/domain/wallet.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/app_palette.dart';
 import '../../../../core/theme/money_colors.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/empty_state.dart';
@@ -16,8 +17,26 @@ import '../widgets/transaction_tile.dart';
 
 /// Tab Riwayat: transaksi bulan terpilih dikelompokkan per hari, masing-masing
 /// dengan total bersih harian. Ketuk untuk mengubah, geser kiri untuk hapus.
-class HistoryTab extends ConsumerWidget {
+class HistoryTab extends ConsumerStatefulWidget {
   const HistoryTab({super.key});
+
+  @override
+  ConsumerState<HistoryTab> createState() => _HistoryTabState();
+}
+
+/// Filter cepat di Riwayat.
+enum _Filter {
+  all('Semua'),
+  income('Pemasukan'),
+  expense('Pengeluaran'),
+  transfer('Transfer');
+
+  const _Filter(this.label);
+  final String label;
+}
+
+class _HistoryTabState extends ConsumerState<HistoryTab> {
+  _Filter _filter = _Filter.all;
 
   /// Kelompokkan transaksi & transfer per tanggal (terbaru dulu).
   /// Item berupa [Transaction] atau [Transfer].
@@ -39,11 +58,22 @@ class HistoryTab extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final month = ref.watch(selectedMonthProvider);
     final monthNotifier = ref.read(selectedMonthProvider.notifier);
-    final transactions = ref.watch(monthTransactionsProvider);
-    final transfers = ref.watch(monthTransfersProvider);
+    final allTransactions = ref.watch(monthTransactionsProvider);
+    final allTransfers = ref.watch(monthTransfersProvider);
+    final transactions = switch (_filter) {
+      _Filter.all => allTransactions,
+      _Filter.income => allTransactions.where((t) => t.isIncome).toList(),
+      _Filter.expense => allTransactions.where((t) => !t.isIncome).toList(),
+      _Filter.transfer => const <Transaction>[],
+    };
+    final transfers = switch (_filter) {
+      _Filter.all || _Filter.transfer => allTransfers,
+      _ => const <Transfer>[],
+    };
+    final p = context.palette;
     final summary = ref.watch(financeSummaryProvider);
     final now = ref.read(clockProvider)();
 
@@ -57,7 +87,7 @@ class HistoryTab extends ConsumerWidget {
           onNext: monthNotifier.next,
           onThisMonth: monthNotifier.goToThisMonth,
         ),
-        if (transactions.isEmpty && transfers.isEmpty)
+        if (allTransactions.isEmpty && allTransfers.isEmpty)
           EmptyState(
             icon: Icons.receipt_long_outlined,
             title: 'Belum ada transaksi di bulan ini.',
@@ -68,15 +98,66 @@ class HistoryTab extends ConsumerWidget {
             onAction: () => openTransactionForm(context, month: month),
           )
         else ...[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
-            child: Text(
-              '${transactions.length} transaksi · '
-              'Masuk ${Fmt.rupiah(summary.totalIncome)} · '
-              'Keluar ${Fmt.rupiah(summary.totalExpense)}',
-              style: Theme.of(context).textTheme.bodySmall,
+          Semantics(
+            label:
+                '${allTransactions.length} transaksi · '
+                'Masuk ${Fmt.rupiah(summary.totalIncome)} · '
+                'Keluar ${Fmt.rupiah(summary.totalExpense)}',
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                child: IntrinsicHeight(
+                  child: Row(
+                    children: [
+                      _Stat(
+                        label: 'Transaksi',
+                        value: '${allTransactions.length}',
+                        color: p.ink,
+                      ),
+                      VerticalDivider(color: p.border, width: 1),
+                      _Stat(
+                        label: 'Masuk',
+                        value: Fmt.rupiah(summary.totalIncome),
+                        color: p.income,
+                      ),
+                      VerticalDivider(color: p.border, width: 1),
+                      _Stat(
+                        label: 'Keluar',
+                        value: Fmt.rupiah(summary.totalExpense),
+                        color: p.expense,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final f in _Filter.values)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(f.label),
+                      selected: _filter == f,
+                      onSelected: (_) => setState(() => _filter = f),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (transactions.isEmpty && transfers.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Text(
+                'Tidak ada ${_filter.label.toLowerCase()} di bulan ini.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
           for (final (day, items) in _byDay(transactions, transfers)) ...[
             _DayHeader(
               day: day,
@@ -87,7 +168,8 @@ class HistoryTab extends ConsumerWidget {
               clipBehavior: Clip.antiAlias,
               child: Column(
                 children: [
-                  for (final item in items)
+                  for (final (i, item) in items.indexed) ...[
+                    if (i > 0) const Divider(indent: 72, endIndent: 16),
                     switch (item) {
                       final Transaction t => TransactionTile(
                         key: ValueKey(t.id),
@@ -108,6 +190,7 @@ class HistoryTab extends ConsumerWidget {
                       ),
                       _ => const SizedBox.shrink(),
                     },
+                  ],
                 ],
               ),
             ),
@@ -131,7 +214,7 @@ class _DayHeader extends StatelessWidget {
     final net = items.fold(0.0, (s, t) => s + t.signedAmount);
     final style = Theme.of(context).textTheme.titleSmall;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
+      padding: const EdgeInsets.fromLTRB(4, 20, 4, 10),
       child: Row(
         children: [
           Expanded(
@@ -148,6 +231,50 @@ class _DayHeader extends StatelessWidget {
                 color: net >= 0 ? context.incomeColor : context.expenseColor,
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Satu angka di strip ringkasan Riwayat.
+class _Stat extends StatelessWidget {
+  const _Stat({required this.label, required this.value, required this.color});
+
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: .6,
+              color: context.palette.inkMuted,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

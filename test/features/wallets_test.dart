@@ -429,17 +429,16 @@ void main() {
 
     testWidgets('transfer muncul di riwayat & saldo berpindah', (tester) async {
       final (_, s) = await pump(tester, wallets: [Wallet.main, _bca]);
-      // Ringkasan: chip per dompet.
-      expect(find.text('BCA Rp 5.000.000'), findsOneWidget);
+      // Ringkasan: kotak per dompet (nama + saldo).
+      expect(find.text('BCA'), findsOneWidget);
+      expect(find.text('Rp 5.000.000'), findsWidgets);
 
       await tester.tap(find.text('Uang saat ini'));
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Transfer antar-dompet'));
       await tester.pumpAndSettle();
-      // Dari: Dompet Utama → ganti ke BCA.
-      await tester.tap(find.text('Dompet Utama').first);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('BCA').last);
+      // Dari: Dompet Utama → ganti ke BCA (tujuan otomatis bertukar).
+      await tester.tap(find.text('BCA').first);
       await tester.pumpAndSettle();
       await tester.enterText(
         find.widgetWithText(TextFormField, 'Nominal'),

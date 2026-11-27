@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/warm_widgets.dart';
 import '../../domain/entities/transaction_category.dart';
 
 /// Pilihan ikon dari [CategoryStyle.icons] dalam bentuk grid.
@@ -29,17 +30,12 @@ class IconPicker extends StatelessWidget {
             button: true,
             child: InkWell(
               onTap: () => onChanged(key),
-              customBorder: const CircleBorder(),
-              child: CircleAvatar(
-                radius: 22,
-                backgroundColor: key == selected
-                    ? color
-                    : color.withValues(alpha: .12),
-                child: Icon(
-                  icon,
-                  size: 20,
-                  color: key == selected ? Colors.white : color,
-                ),
+              borderRadius: BorderRadius.circular(14),
+              child: IconTile(
+                icon: icon,
+                size: 46,
+                color: key == selected ? Colors.white : color,
+                background: key == selected ? color : null,
               ),
             ),
           ),
@@ -73,11 +69,26 @@ class ColorPicker extends StatelessWidget {
             child: InkWell(
               onTap: () => onChanged(c),
               customBorder: const CircleBorder(),
-              child: CircleAvatar(
-                radius: 16,
-                backgroundColor: c,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: c,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: c == selected
+                        ? Theme.of(context).colorScheme.onSurface
+                        : Colors.transparent,
+                    width: 2.5,
+                  ),
+                ),
                 child: c == selected
-                    ? const Icon(Icons.check, size: 18, color: Colors.white)
+                    ? const Icon(
+                        Icons.check_rounded,
+                        size: 18,
+                        color: Colors.white,
+                      )
                     : null,
               ),
             ),

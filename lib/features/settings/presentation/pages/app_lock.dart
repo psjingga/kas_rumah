@@ -105,14 +105,44 @@ class _LockScreenState extends ConsumerState<LockScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.lock_outline, size: 48, color: scheme.primary),
-                const SizedBox(height: 12),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(22),
+                  child: Image.asset(
+                    'assets/icon/icon.png',
+                    width: 76,
+                    height: 76,
+                    errorBuilder: (_, _, _) => Icon(
+                      Icons.lock_rounded,
+                      size: 48,
+                      color: scheme.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
                 Text(
                   'Kas Rumah',
-                  style: Theme.of(context).textTheme.titleLarge,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 4),
-                const Text('Masukkan PIN untuk membuka'),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.lock_rounded,
+                      size: 14,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        'Masukkan PIN untuk membuka',
+                        style: TextStyle(color: scheme.onSurfaceVariant),
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 24),
                 PinPad(
                   length: security.pinLength,

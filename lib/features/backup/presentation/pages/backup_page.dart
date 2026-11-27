@@ -1,4 +1,7 @@
 import 'dart:convert';
+import '../../../../core/theme/app_palette.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/warm_widgets.dart';
 import '../../data/backup_crypto.dart';
 import 'dart:io';
 
@@ -186,6 +189,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
     final last = ref.watch(lastBackupProvider);
     final month = ref.watch(selectedMonthProvider);
     final scheme = Theme.of(context).colorScheme;
+    final p = context.palette;
     final stale =
         last == null ||
         ref.read(clockProvider)().difference(last) > const Duration(days: 30);
@@ -195,52 +199,126 @@ class _BackupPageState extends ConsumerState<BackupPage> {
       body: AbsorbPointer(
         absorbing: _busy,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
           children: [
-            if (_busy) const LinearProgressIndicator(),
+            if (_busy) ...[
+              const LinearProgressIndicator(),
+              const SizedBox(height: 12),
+            ],
+            // Status backup terakhir.
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: stale ? null : p.heroGradient,
+                color: stale ? scheme.errorContainer : null,
+                borderRadius: BorderRadius.circular(AppRadius.hero),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      IconTile(
+                        icon: stale
+                            ? Icons.warning_amber_rounded
+                            : Icons.verified_rounded,
+                        color: stale ? p.expense : Colors.white,
+                        background: stale ? null : const Color(0x33FFFFFF),
+                        size: 48,
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          last == null
+                              ? 'Belum pernah backup'
+                              : 'Backup terakhir ${Fmt.dateTime(last)}',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: stale
+                                ? scheme.onErrorContainer
+                                : Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Data hanya tersimpan di HP ini. Simpan file backup ke '
+                    'Google Drive / WhatsApp secara berkala.',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: stale
+                          ? scheme.onErrorContainer
+                          : Colors.white.withValues(alpha: .9),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 22),
+            const SectionLabel('Backup'),
             Card(
-              color: stale ? scheme.errorContainer : scheme.secondaryContainer,
-              child: ListTile(
-                leading: Icon(stale ? Icons.warning_amber : Icons.verified),
-                title: Text(
-                  last == null
-                      ? 'Belum pernah backup'
-                      : 'Backup terakhir ${Fmt.dateTime(last)}',
-                ),
-                subtitle: const Text(
-                  'Data hanya tersimpan di HP ini. Simpan file backup ke '
-                  'Google Drive / WhatsApp secara berkala.',
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Transaksi, dompet, anggaran, target & utang dalam satu file '
+                      'yang bisa dikunci kata sandi. Foto struk tidak ikut.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 14),
+                    FilledButton.icon(
+                      onPressed: _backup,
+                      icon: const Icon(Icons.backup_rounded),
+                      label: const Text('Buat backup & bagikan'),
+                    ),
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      onPressed: _restore,
+                      icon: const Icon(Icons.restore_rounded),
+                      label: const Text('Pulihkan dari file backup'),
+                    ),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: _backup,
-              icon: const Icon(Icons.backup_outlined),
-              label: const Text('Buat backup & bagikan'),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              onPressed: _restore,
-              icon: const Icon(Icons.restore),
-              label: const Text('Pulihkan dari file backup'),
-            ),
-            const SizedBox(height: 28),
-            Text(
-              'Ekspor ke Excel (CSV)',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              onPressed: () => _exportCsv(thisMonth: true),
-              icon: const Icon(Icons.table_view_outlined),
-              label: Text('Transaksi ${Fmt.month(month)}'),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              onPressed: () => _exportCsv(thisMonth: false),
-              icon: const Icon(Icons.table_chart_outlined),
-              label: const Text('Semua transaksi'),
+            const SizedBox(height: 22),
+            const SectionLabel('Ekspor ke Excel (CSV)'),
+            Card(
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: IconTile(
+                      icon: Icons.table_view_rounded,
+                      color: p.income,
+                    ),
+                    title: Text('Transaksi ${Fmt.month(month)}'),
+                    trailing: Icon(
+                      Icons.chevron_right_rounded,
+                      color: p.inkMuted,
+                    ),
+                    onTap: () => _exportCsv(thisMonth: true),
+                  ),
+                  const Divider(indent: 72, endIndent: 16),
+                  ListTile(
+                    leading: IconTile(
+                      icon: Icons.table_chart_rounded,
+                      color: p.info,
+                    ),
+                    title: const Text('Semua transaksi'),
+                    trailing: Icon(
+                      Icons.chevron_right_rounded,
+                      color: p.inkMuted,
+                    ),
+                    onTap: () => _exportCsv(thisMonth: false),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

@@ -3,7 +3,9 @@ import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/theme/money_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/app_palette.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../../core/widgets/warm_widgets.dart';
 import '../../../transactions/domain/entities/transaction.dart';
 import '../../../transactions/presentation/providers/category_providers.dart';
 import '../../../transactions/presentation/providers/transaction_providers.dart';
@@ -58,12 +60,14 @@ class BudgetsTab extends ConsumerWidget {
             )
           else ...[
             _TotalCard(limit: totalLimit, spent: totalSpent),
-            const SizedBox(height: 12),
+            const SizedBox(height: 20),
+            SectionLabel('Per kategori · ${statuses.length}'),
             Card(
               clipBehavior: Clip.antiAlias,
               child: Column(
                 children: [
-                  for (final s in statuses)
+                  for (final (i, s) in statuses.indexed) ...[
+                    if (i > 0) const Divider(indent: 68, endIndent: 16),
                     _BudgetTile(
                       status: s,
                       onTap: () => showBudgetLimitDialog(
@@ -73,6 +77,7 @@ class BudgetsTab extends ConsumerWidget {
                         current: s.limit,
                       ),
                     ),
+                  ],
                 ],
               ),
             ),
@@ -94,36 +99,99 @@ class _TotalCard extends StatelessWidget {
     final ratio = limit == 0 ? 0.0 : spent / limit;
     final color = budgetLevelColor(context, BudgetLevel.of(ratio));
     final textTheme = Theme.of(context).textTheme;
+    final p = context.palette;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.all(18),
+        child: Row(
           children: [
-            Text('Total anggaran bulan ini', style: textTheme.bodySmall),
-            const SizedBox(height: 4),
-            Text(
-              '${Fmt.rupiah(spent)} / ${Fmt.rupiah(limit)}',
-              style: textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
+            // Cincin terpakai vs batas.
+            SizedBox.square(
+              dimension: 104,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(end: ratio.clamp(0, 1).toDouble()),
+                    duration: const Duration(milliseconds: 600),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, v, _) => CircularProgressIndicator(
+                      value: v,
+                      strokeWidth: 11,
+                      strokeCap: StrokeCap.round,
+                      color: color,
+                      backgroundColor: p.surfaceMuted,
+                    ),
+                  ),
+                  Center(
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: '${(ratio * 100).round()}%',
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          TextSpan(
+                            text: '\nterpakai',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: p.inkMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 10),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: LinearProgressIndicator(
-                value: ratio.clamp(0, 1),
-                minHeight: 10,
-                color: color,
-                backgroundColor: color.withValues(alpha: .15),
+            const SizedBox(width: 18),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Total anggaran bulan ini', style: textTheme.bodySmall),
+                  const SizedBox(height: 4),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      Fmt.rupiah(spent),
+                      style: textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 22,
+                      ),
+                    ),
+                  ),
+                  Text('dari ${Fmt.rupiah(limit)}', style: textTheme.bodySmall),
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: .14),
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                    child: Text(
+                      limit >= spent
+                          ? 'Sisa ${Fmt.rupiah(limit - spent)}'
+                          : 'Lebih ${Fmt.rupiah(spent - limit)}',
+                      style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12.5,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              limit >= spent
-                  ? 'Sisa ${Fmt.rupiah(limit - spent)}'
-                  : 'Lebih ${Fmt.rupiah(spent - limit)}',
-              style: TextStyle(color: color, fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -142,17 +210,14 @@ class _BudgetTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = status;
     final color = budgetLevelColor(context, s.level);
+    final p = context.palette;
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: s.category.color.withValues(alpha: .15),
-              child: Icon(s.category.icon, color: s.category.color, size: 18),
-            ),
+            IconTile(icon: s.category.icon, color: s.category.color),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -165,28 +230,41 @@ class _BudgetTile extends StatelessWidget {
                           s.category.label,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
+                          style: Theme.of(context).textTheme.titleSmall,
                         ),
                       ),
+                      if (s.level == BudgetLevel.over) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: p.expenseSoft,
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                          child: Text(
+                            'Lewat batas',
+                            style: TextStyle(
+                              color: p.expense,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
                       Text(
                         '${(s.ratio * 100).round()}%',
                         style: TextStyle(
                           color: color,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: s.ratio.clamp(0, 1),
-                      minHeight: 6,
-                      color: color,
-                      backgroundColor: color.withValues(alpha: .15),
-                    ),
-                  ),
+                  const SizedBox(height: 8),
+                  SoftProgress(value: s.ratio, color: color),
                   const SizedBox(height: 6),
                   Text(
                     '${Fmt.rupiah(s.spent)} dari ${Fmt.rupiah(s.limit)} · '
@@ -222,9 +300,12 @@ Future<void> pickCategoryForBudget(BuildContext context, WidgetRef ref) async {
         child: ListView(
           shrinkWrap: true,
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Text('Pilih kategori pengeluaran'),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text(
+                'Pilih kategori pengeluaran',
+                style: Theme.of(ctx).textTheme.titleMedium,
+              ),
             ),
             if (options.isEmpty)
               const Padding(
@@ -233,7 +314,7 @@ Future<void> pickCategoryForBudget(BuildContext context, WidgetRef ref) async {
               ),
             for (final c in options)
               ListTile(
-                leading: Icon(c.icon, color: c.color),
+                leading: IconTile(icon: c.icon, color: c.color, size: 36),
                 title: Text(c.label),
                 onTap: () => Navigator.pop(ctx, c),
               ),

@@ -3,7 +3,10 @@ import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/theme/money_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/app_palette.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../../core/widgets/warm_widgets.dart';
 import '../../../transactions/domain/entities/transaction_category.dart';
 import '../../../transactions/presentation/providers/transaction_providers.dart';
 import '../../domain/savings_goal.dart';
@@ -41,22 +44,12 @@ class GoalsTab extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
       children: [
-        Card(
-          child: ListTile(
-            leading: const Icon(Icons.savings_outlined),
-            title: const Text('Total tabungan'),
-            trailing: Text(
-              Fmt.rupiah(totalSaved),
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
+        _TotalCard(goals: goals, totalSaved: totalSaved),
+        const SizedBox(height: 20),
+        SectionLabel('Target · ${goals.length}'),
         for (final g in goals)
           Padding(
-            padding: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.only(bottom: 12),
             child: GoalCard(
               goal: g,
               now: now,
@@ -68,6 +61,93 @@ class GoalsTab extends ConsumerWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Ringkasan semua target: total terkumpul dan progres keseluruhan.
+class _TotalCard extends StatelessWidget {
+  const _TotalCard({required this.goals, required this.totalSaved});
+
+  final List<SavingsGoal> goals;
+  final double totalSaved;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    final target = goals.fold(0.0, (s, g) => s + g.target);
+    final reached = goals.where((g) => g.isReached).length;
+    final ratio = target == 0 ? 0.0 : totalSaved / target;
+    const white = Colors.white;
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: p.heroGradient,
+        borderRadius: BorderRadius.circular(AppRadius.hero),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const IconTile(
+                icon: Icons.savings_rounded,
+                color: white,
+                background: Color(0x33FFFFFF),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Total tabungan',
+                  style: TextStyle(
+                    color: white.withValues(alpha: .9),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Text(
+                '$reached/${goals.length} tercapai',
+                style: TextStyle(
+                  color: white.withValues(alpha: .9),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              Fmt.rupiah(totalSaved),
+              style: const TextStyle(
+                color: white,
+                fontSize: 30,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -.5,
+              ),
+            ),
+          ),
+          Text(
+            'dari ${Fmt.rupiah(target)} · ${(ratio * 100).round()}% terkumpul',
+            style: TextStyle(
+              color: white.withValues(alpha: .85),
+              fontSize: 12.5,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: ratio.clamp(0, 1),
+              minHeight: 8,
+              color: white,
+              backgroundColor: white.withValues(alpha: .25),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -97,15 +177,16 @@ class GoalCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(18),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  CircleAvatar(
-                    backgroundColor: color.withValues(alpha: .15),
-                    child: Icon(CategoryStyle.icons[g.iconKey], color: color),
+                  IconTile(
+                    icon: CategoryStyle.icons[g.iconKey] ?? Icons.savings,
+                    color: color,
+                    size: 44,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -117,35 +198,51 @@ class GoalCard extends StatelessWidget {
                     ),
                   ),
                   if (g.isReached)
-                    Chip(
-                      label: const Text('Tercapai'),
-                      avatar: Icon(
-                        Icons.check_circle,
-                        color: context.incomeColor,
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(8, 4, 10, 4),
+                      decoration: BoxDecoration(
+                        color: context.palette.incomeSoft,
+                        borderRadius: BorderRadius.circular(99),
                       ),
-                      visualDensity: VisualDensity.compact,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.check_circle_rounded,
+                            size: 16,
+                            color: context.incomeColor,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Tercapai',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: context.incomeColor,
+                            ),
+                          ),
+                        ],
+                      ),
                     )
                   else
                     Text(
                       '${(g.progress * 100).round()}%',
-                      style: textTheme.titleMedium?.copyWith(color: color),
+                      style: textTheme.titleMedium?.copyWith(
+                        color: color,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                 ],
               ),
               const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: LinearProgressIndicator(
-                  value: g.progress,
-                  minHeight: 10,
-                  color: color,
-                  backgroundColor: color.withValues(alpha: .15),
-                ),
+              SoftProgress(
+                value: g.progress,
+                color: g.isReached ? context.incomeColor : color,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               Text(
                 '${Fmt.rupiah(g.saved)} dari ${Fmt.rupiah(g.target)}',
-                style: const TextStyle(fontWeight: FontWeight.w600),
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
               if (g.deadline case final d?)
                 Text(

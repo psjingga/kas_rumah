@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/money_colors.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../../core/widgets/warm_widgets.dart';
 import '../../domain/entities/finance_summary.dart';
 
 /// Rincian pengeluaran per kategori: ikon, nominal, bar porsi, dan
@@ -38,15 +39,7 @@ class CategoryBreakdownCard extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      radius: 16,
-                      backgroundColor: category.color.withValues(alpha: .15),
-                      child: Icon(
-                        category.icon,
-                        color: category.color,
-                        size: 18,
-                      ),
-                    ),
+                    IconTile(icon: category.icon, color: category.color),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(

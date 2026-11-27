@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_palette.dart';
+import '../../../../core/widgets/warm_widgets.dart';
 import '../../domain/services/reminder_planner.dart';
 import '../../../debts/presentation/providers/debt_providers.dart';
 import '../../../debts/presentation/pages/debt_pages.dart';
@@ -155,10 +157,10 @@ class NotificationsPage extends ConsumerWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.notifications_none,
-                      size: 56,
-                      color: scheme.outline,
+                    IconTile(
+                      icon: Icons.notifications_none_rounded,
+                      color: context.palette.primary,
+                      size: 72,
                     ),
                     const SizedBox(height: 12),
                     const Text('Belum ada notifikasi.'),
@@ -173,60 +175,82 @@ class NotificationsPage extends ConsumerWidget {
                 ),
               ),
             )
-          : ListView.separated(
-              itemCount: entries.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
-              itemBuilder: (context, i) {
-                final e = entries[i];
-                final isReminder = e.recurringId != null;
-                final recorded = _isRecorded(ref, e);
-                return ListTile(
-                  key: ValueKey(e.id),
-                  tileColor: e.read
-                      ? null
-                      : scheme.primaryContainer.withValues(alpha: .35),
-                  onTap: () => _open(context, ref, e),
-                  leading: CircleAvatar(
-                    backgroundColor: scheme.secondaryContainer,
-                    child: Icon(
-                      isReminder ? Icons.event_repeat : Icons.notifications,
-                      color: scheme.onSecondaryContainer,
-                      size: 20,
-                    ),
-                  ),
-                  title: Text(
-                    e.title,
-                    style: TextStyle(
-                      fontWeight: e.read ? FontWeight.w400 : FontWeight.w700,
-                    ),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+              children: [
+                Card(
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
                     children: [
-                      const SizedBox(height: 2),
-                      Text(e.body),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              Fmt.dateTime(e.time),
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ),
-                          if (isReminder)
-                            _StatusChip(
-                              recorded: recorded,
-                              debt: _debtId(e) != null,
-                            ),
-                        ],
-                      ),
+                      for (final (i, e) in entries.indexed) ...[
+                        if (i > 0) const Divider(indent: 72, endIndent: 16),
+                        _entryTile(context, ref, e),
+                      ],
                     ],
                   ),
-                  isThreeLine: true,
-                );
-              },
+                ),
+              ],
             ),
+    );
+  }
+
+  Widget _entryTile(BuildContext context, WidgetRef ref, NotificationEntry e) {
+    final p = context.palette;
+    final isReminder = e.recurringId != null;
+    final isDebt = _debtId(e) != null;
+    final recorded = _isRecorded(ref, e);
+    final (icon, color) = isDebt
+        ? (Icons.handshake_rounded, const Color(0xFF8E5BB5))
+        : isReminder
+        ? (Icons.event_repeat_rounded, p.warning)
+        : (Icons.notifications_rounded, p.primary);
+    return ListTile(
+      key: ValueKey(e.id),
+      tileColor: e.read ? null : p.primarySoft.withValues(alpha: .45),
+      contentPadding: const EdgeInsets.fromLTRB(16, 6, 12, 6),
+      onTap: () => _open(context, ref, e),
+      leading: IconTile(icon: icon, color: color),
+      title: Row(
+        children: [
+          Expanded(
+            child: Text(
+              e.title,
+              style: TextStyle(
+                fontWeight: e.read ? FontWeight.w600 : FontWeight.w800,
+              ),
+            ),
+          ),
+          if (!e.read)
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: p.primary,
+                shape: BoxShape.circle,
+              ),
+            ),
+        ],
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 2),
+          Text(e.body),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  Fmt.dateTime(e.time),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+              if (isReminder) _StatusChip(recorded: recorded, debt: isDebt),
+            ],
+          ),
+        ],
+      ),
+      isThreeLine: true,
     );
   }
 }
@@ -246,7 +270,7 @@ class _StatusChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: .12),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(99),
       ),
       child: Text(
         switch ((debt, recorded)) {
@@ -258,7 +282,7 @@ class _StatusChip extends StatelessWidget {
         style: TextStyle(
           color: color,
           fontSize: 11,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );

@@ -51,3 +51,7 @@ android/key.properties
 
 # FVM (versi Flutter lokal; .fvmrc tetap di-commit)
 .fvm/
+
+# Superdesign: hanya panduan desain yang di-commit (analisis & draf lokal).
+.superdesign/*
+!.superdesign/design-system.md

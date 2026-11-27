@@ -10,6 +10,7 @@ import 'package:pdf/widgets.dart' as pw;
 import '../../../../core/navigation/home_tab.dart';
 import '../../../../core/theme/money_colors.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../../core/widgets/warm_widgets.dart';
 import '../../../../core/utils/month.dart';
 import '../../../../core/utils/share_file.dart';
 import '../../../../core/widgets/empty_state.dart';
@@ -45,12 +46,16 @@ class ReportsPage extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Laporan'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Tahunan'),
-              Tab(text: 'Bandingkan'),
-              Tab(text: 'Bulanan'),
-            ],
+          // Tab berbentuk pil di atas latar krem.
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(56),
+            child: PillTabBar(
+              tabs: const [
+                Tab(text: 'Tahunan'),
+                Tab(text: 'Bandingkan'),
+                Tab(text: 'Bulanan'),
+              ],
+            ),
           ),
         ),
         body: const TabBarView(
@@ -82,7 +87,7 @@ class _YearTab extends ConsumerWidget {
             IconButton(
               tooltip: 'Tahun sebelumnya',
               onPressed: year.previous,
-              icon: const Icon(Icons.chevron_left),
+              icon: const Icon(Icons.chevron_left_rounded),
             ),
             Expanded(
               child: Text(
@@ -94,7 +99,7 @@ class _YearTab extends ConsumerWidget {
             IconButton(
               tooltip: 'Tahun berikutnya',
               onPressed: year.next,
-              icon: const Icon(Icons.chevron_right),
+              icon: const Icon(Icons.chevron_right_rounded),
             ),
           ],
         ),
@@ -109,9 +114,9 @@ class _YearTab extends ConsumerWidget {
             crossAxisCount: 2,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 8,
-            crossAxisSpacing: 8,
-            childAspectRatio: 2.2,
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            childAspectRatio: 2.0,
             children: [
               _Stat(
                 'Total pemasukan',
@@ -246,7 +251,7 @@ class _Stat extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
@@ -257,7 +262,7 @@ class _Stat extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: Text(
                 value,
-                style: textTheme.titleSmall?.copyWith(
+                style: textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
                   color: color,
                 ),
@@ -316,7 +321,7 @@ class _CompareTab extends ConsumerWidget {
             visualDensity: VisualDensity.compact,
             tooltip: 'Bulan sebelumnya',
             onPressed: () => onChanged(value.addMonths(-1)),
-            icon: const Icon(Icons.chevron_left),
+            icon: const Icon(Icons.chevron_left_rounded),
           ),
           Expanded(
             child: Text(
@@ -329,7 +334,7 @@ class _CompareTab extends ConsumerWidget {
             visualDensity: VisualDensity.compact,
             tooltip: 'Bulan berikutnya',
             onPressed: () => onChanged(value.addMonths(1)),
-            icon: const Icon(Icons.chevron_right),
+            icon: const Icon(Icons.chevron_right_rounded),
           ),
         ],
       ),

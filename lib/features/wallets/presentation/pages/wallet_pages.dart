@@ -7,6 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/money_colors.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/empty_state.dart';
+import '../../../../core/widgets/warm_widgets.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_palette.dart';
 import '../../../transactions/domain/entities/transaction.dart';
 import '../../../transactions/presentation/providers/transaction_providers.dart';
 import '../../../transactions/presentation/widgets/form_fields.dart';
@@ -75,7 +78,7 @@ class WalletsPage extends ConsumerWidget {
         actions: [
           IconButton(
             tooltip: 'Transfer antar-dompet',
-            icon: const Icon(Icons.swap_horiz),
+            icon: const Icon(Icons.swap_horiz_rounded),
             onPressed: active.length < 2
                 ? null
                 : () => openTransferForm(context),
@@ -84,71 +87,106 @@ class WalletsPage extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _push(context, const WalletFormPage()),
-        icon: const Icon(Icons.add),
+        icon: const Icon(Icons.add_rounded),
         label: const Text('Dompet'),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
         children: [
-          Card(
-            color: Theme.of(context).colorScheme.secondaryContainer,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Total uang saat ini', style: textTheme.bodySmall),
-                  const SizedBox(height: 4),
-                  Text(
-                    Fmt.rupiah(total),
-                    style: textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Jumlah saldo ${active.length} dompet aktif sampai hari ini. '
-                    'Transfer antar-dompet tidak dihitung sebagai '
-                    'pemasukan/pengeluaran.'
-                    '${switch (ref.watch(upcomingTransactionCountProvider)) {
-                      0 => '',
-                      final n => ' $n transaksi bertanggal mendatang belum dihitung.',
-                    }}',
-                    style: textTheme.bodySmall,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Saldo berbeda dengan uang sebenarnya? Buka dompetnya lalu '
-                    'ketuk "Sesuaikan".',
-                    style: textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: context.palette.heroGradient,
+              borderRadius: BorderRadius.circular(AppRadius.hero),
             ),
-          ),
-          const SizedBox(height: 12),
-          Card(
-            clipBehavior: Clip.antiAlias,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (final (i, w) in active.indexed)
-                  _WalletRow(
-                    wallet: w,
-                    balance: balances[w.id] ?? 0,
-                    isDefault: i == 0,
-                    onTap: () =>
-                        _push(context, WalletDetailPage(walletId: w.id)),
+                Text(
+                  'Total uang saat ini',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: .9),
+                    fontWeight: FontWeight.w600,
                   ),
+                ),
+                const SizedBox(height: 4),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    Fmt.rupiah(total),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 32,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -.5,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Jumlah saldo ${active.length} dompet aktif sampai hari ini. '
+                  'Transfer antar-dompet tidak dihitung sebagai '
+                  'pemasukan/pengeluaran.'
+                  '${switch (ref.watch(upcomingTransactionCountProvider)) {
+                    0 => '',
+                    final n => ' $n transaksi bertanggal mendatang belum dihitung.',
+                  }}',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: .85),
+                    fontSize: 12,
+                  ),
+                ),
               ],
             ),
           ),
-          if (archived.isNotEmpty) ...[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 20, 4, 8),
-              child: Text('Diarsipkan', style: textTheme.titleSmall),
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline_rounded,
+                  size: 16,
+                  color: context.palette.inkMuted,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Saldo berbeda dengan uang sebenarnya? Buka dompetnya lalu '
+                    'ketuk "Sesuaikan".',
+                    style: textTheme.bodySmall,
+                  ),
+                ),
+              ],
             ),
+          ),
+          for (final type in WalletType.values)
+            if (active.where((w) => w.type == type).toList() case final group
+                when group.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              SectionLabel(type.label),
+              Card(
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  children: [
+                    for (final (i, w) in group.indexed) ...[
+                      if (i > 0) const Divider(indent: 72, endIndent: 16),
+                      _WalletRow(
+                        wallet: w,
+                        balance: balances[w.id] ?? 0,
+                        isDefault: w.id == active.first.id,
+                        onTap: () =>
+                            _push(context, WalletDetailPage(walletId: w.id)),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          if (archived.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            const SectionLabel('Diarsipkan'),
             Card(
               clipBehavior: Clip.antiAlias,
               child: Column(
@@ -191,6 +229,7 @@ class _WalletRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: WalletAvatar(wallet: wallet),
       title: Text(wallet.name, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(
@@ -199,8 +238,9 @@ class _WalletRow extends StatelessWidget {
       trailing: Text(
         Fmt.rupiah(balance),
         style: TextStyle(
-          fontWeight: FontWeight.w700,
-          color: balance < 0 ? context.expenseColor : null,
+          fontSize: 15,
+          fontWeight: FontWeight.w800,
+          color: balance < 0 ? context.expenseColor : context.palette.ink,
         ),
       ),
     );
@@ -383,12 +423,16 @@ class WalletDetailPage extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           Card(
+            color: Color.alphaBlend(
+              wallet.color.withValues(alpha: .10),
+              context.palette.surface,
+            ),
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               child: Row(
                 children: [
-                  WalletAvatar(wallet: wallet, radius: 26),
-                  const SizedBox(width: 14),
+                  WalletAvatar(wallet: wallet, radius: 28),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -400,14 +444,21 @@ class WalletDetailPage extends ConsumerWidget {
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                         Text(
-                          Fmt.rupiah(balance),
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: balance < 0
-                                    ? context.expenseColor
-                                    : null,
-                              ),
+                          'Saldo saat ini',
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            Fmt.rupiah(balance),
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -.5,
+                              color: balance < 0 ? context.expenseColor : null,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -416,15 +467,15 @@ class WalletDetailPage extends ConsumerWidget {
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
-                child: FilledButton.tonalIcon(
+                child: FilledButton.icon(
                   onPressed: wallets.where((w) => !w.archived).length < 2
                       ? null
                       : () => openTransferForm(context, from: walletId),
-                  icon: const Icon(Icons.swap_horiz),
+                  icon: const Icon(Icons.swap_horiz_rounded),
                   label: const Text('Transfer'),
                 ),
               ),
@@ -432,15 +483,14 @@ class WalletDetailPage extends ConsumerWidget {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () => _adjust(context, ref, wallet),
-                  icon: const Icon(Icons.tune),
+                  icon: const Icon(Icons.tune_rounded),
                   label: const Text('Sesuaikan'),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Text('Riwayat', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
+          const SizedBox(height: 24),
+          const SectionLabel('Riwayat'),
           if (items.isEmpty)
             const EmptyState(
               icon: Icons.receipt_long_outlined,
@@ -452,7 +502,8 @@ class WalletDetailPage extends ConsumerWidget {
               clipBehavior: Clip.antiAlias,
               child: Column(
                 children: [
-                  for (final (_, item) in items)
+                  for (final (i, (_, item)) in items.indexed) ...[
+                    if (i > 0) const Divider(indent: 72, endIndent: 16),
                     switch (item) {
                       final Transaction t => TransactionTile(
                         key: ValueKey(t.id),
@@ -473,6 +524,7 @@ class WalletDetailPage extends ConsumerWidget {
                       ),
                       _ => const SizedBox.shrink(),
                     },
+                  ],
                 ],
               ),
             ),
@@ -775,16 +827,20 @@ class WalletsSummaryCard extends ConsumerWidget {
           context,
         ).push(MaterialPageRoute<void>(builder: (_) => const WalletsPage())),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+          padding: const EdgeInsets.fromLTRB(16, 16, 12, 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  const Icon(Icons.account_balance_wallet_outlined, size: 18),
-                  const SizedBox(width: 6),
+                  IconTile(
+                    icon: Icons.account_balance_wallet_rounded,
+                    color: context.palette.info,
+                    size: 32,
+                  ),
+                  const SizedBox(width: 8),
                   Expanded(
-                    child: Text('Uang saat ini', style: textTheme.labelLarge),
+                    child: Text('Uang saat ini', style: textTheme.titleSmall),
                   ),
                   Text(
                     Fmt.rupiah(f.now),
@@ -806,14 +862,34 @@ class WalletsSummaryCard extends ConsumerWidget {
                 child: Row(
                   children: [
                     for (final w in wallets)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: Chip(
-                          avatar: Icon(w.type.icon, size: 16, color: w.color),
-                          label: Text(
-                            '${w.name} ${Fmt.rupiah(balances[w.id] ?? 0)}',
-                          ),
-                          visualDensity: VisualDensity.compact,
+                      Container(
+                        margin: const EdgeInsets.only(right: 8),
+                        padding: const EdgeInsets.fromLTRB(6, 6, 12, 6),
+                        decoration: BoxDecoration(
+                          color: context.palette.surfaceMuted,
+                          borderRadius: BorderRadius.circular(AppRadius.box),
+                        ),
+                        child: Row(
+                          children: [
+                            IconTile(
+                              icon: w.type.icon,
+                              color: w.color,
+                              size: 30,
+                            ),
+                            const SizedBox(width: 8),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(w.name, style: textTheme.labelSmall),
+                                Text(
+                                  Fmt.rupiah(balances[w.id] ?? 0),
+                                  style: textTheme.labelLarge?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
                   ],

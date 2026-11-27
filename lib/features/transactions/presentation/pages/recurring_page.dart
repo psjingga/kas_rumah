@@ -4,6 +4,7 @@ import '../../../../core/theme/money_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/formatters.dart';
+import '../../../../core/widgets/warm_widgets.dart';
 import '../../../reminders/presentation/pages/reminder_settings_page.dart';
 import '../../domain/entities/recurring_transaction.dart';
 import '../providers/recurring_providers.dart';
@@ -64,18 +65,21 @@ class RecurringPage extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openForm(context, ref),
-        icon: const Icon(Icons.add),
+        icon: const Icon(Icons.add_rounded),
         label: const Text('Rutin'),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
         children: [
-          Text(
-            'Transaksi rutin muncul di dashboard setiap bulan sebagai '
-            '"belum dicatat". Nominal default bisa diubah saat mencatat.',
-            style: TextStyle(color: Theme.of(context).colorScheme.outline),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Text(
+              'Transaksi rutin muncul di dashboard setiap bulan sebagai '
+              '"belum dicatat". Nominal default bisa diubah saat mencatat.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           if (items.isEmpty)
             EmptyState(
               icon: Icons.event_repeat,
@@ -87,32 +91,53 @@ class RecurringPage extends ConsumerWidget {
               onAction: () => _openForm(context, ref),
             )
           else ...[
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  children: [
-                    _TotalRow('Pemasukan rutin / bulan', income),
-                    const SizedBox(height: 6),
-                    _TotalRow('Pengeluaran rutin / bulan', expense),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Card(
-              clipBehavior: Clip.antiAlias,
-              child: Column(
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  for (final r in items)
-                    _RecurringTile(
-                      recurring: r,
-                      recordedCount: r.recordedCount(transactions),
-                      onTap: () => _openForm(context, ref, r),
+                  Expanded(
+                    child: _TotalRow(
+                      'Pemasukan rutin / bulan',
+                      income,
+                      color: context.incomeColor,
+                      icon: Icons.trending_up_rounded,
                     ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _TotalRow(
+                      'Pengeluaran rutin / bulan',
+                      expense,
+                      color: context.expenseColor,
+                      icon: Icons.trending_down_rounded,
+                    ),
+                  ),
                 ],
               ),
             ),
+            for (final (label, group) in [
+              ('Pengeluaran', items.where((r) => !r.isIncome).toList()),
+              ('Pemasukan', items.where((r) => r.isIncome).toList()),
+            ])
+              if (group.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                SectionLabel('$label · ${group.length}'),
+                Card(
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    children: [
+                      for (final (i, r) in group.indexed) ...[
+                        if (i > 0) const Divider(indent: 72, endIndent: 16),
+                        _RecurringTile(
+                          recurring: r,
+                          recordedCount: r.recordedCount(transactions),
+                          onTap: () => _openForm(context, ref, r),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
           ],
         ],
       ),
@@ -121,21 +146,45 @@ class RecurringPage extends ConsumerWidget {
 }
 
 class _TotalRow extends StatelessWidget {
-  const _TotalRow(this.label, this.value);
+  const _TotalRow(
+    this.label,
+    this.value, {
+    required this.color,
+    required this.icon,
+  });
 
   final String label;
   final double value;
+  final Color color;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(child: Text(label)),
-        Text(
-          Fmt.rupiah(value),
-          style: const TextStyle(fontWeight: FontWeight.w600),
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            IconTile(icon: icon, color: color, size: 34),
+            const SizedBox(height: 10),
+            Text(label, style: Theme.of(context).textTheme.bodySmall),
+            const SizedBox(height: 2),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                Fmt.rupiah(value),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
@@ -160,10 +209,8 @@ class _RecurringTile extends StatelessWidget {
       opacity: r.active ? 1 : .5,
       child: ListTile(
         onTap: onTap,
-        leading: CircleAvatar(
-          backgroundColor: r.category.color.withValues(alpha: .15),
-          child: Icon(r.category.icon, color: r.category.color, size: 20),
-        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        leading: IconTile(icon: r.category.icon, color: r.category.color),
         title: Text(r.title, maxLines: 1, overflow: TextOverflow.ellipsis),
         subtitle: Text(
           [
@@ -180,7 +227,8 @@ class _RecurringTile extends StatelessWidget {
           '${r.isIncome ? '+' : '−'} ${Fmt.rupiah(r.amount)}',
           style: TextStyle(
             color: r.isIncome ? context.incomeColor : context.expenseColor,
-            fontWeight: FontWeight.w600,
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),

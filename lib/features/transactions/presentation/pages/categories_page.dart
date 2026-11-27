@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/widgets/warm_widgets.dart';
+import '../../../../core/theme/app_palette.dart';
 import '../../domain/entities/transaction_category.dart';
 import '../providers/category_providers.dart';
 import '../providers/recurring_providers.dart';
@@ -27,16 +29,19 @@ class CategoriesPage extends ConsumerWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Kategori'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Pengeluaran'),
-              Tab(text: 'Pemasukan'),
-            ],
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(56),
+            child: PillTabBar(
+              tabs: const [
+                Tab(text: 'Pengeluaran'),
+                Tab(text: 'Pemasukan'),
+              ],
+            ),
           ),
         ),
         floatingActionButton: FloatingActionButton.extended(
           onPressed: () => _open(context),
-          icon: const Icon(Icons.add),
+          icon: const Icon(Icons.add_rounded),
           label: const Text('Kategori'),
         ),
         body: TabBarView(
@@ -45,23 +50,64 @@ class CategoriesPage extends ConsumerWidget {
               TransactionType.expense,
               TransactionType.income,
             ])
-              ListView(
-                padding: const EdgeInsets.only(bottom: 96),
-                children: [
-                  for (final c in ref.watch(categoriesOfTypeProvider(type)))
-                    ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: c.color.withValues(alpha: .15),
-                        child: Icon(c.icon, color: c.color, size: 20),
-                      ),
-                      title: Text(c.label),
-                      subtitle: c.builtIn ? const Text('Bawaan') : null,
-                      trailing: c.builtIn
-                          ? const Icon(Icons.lock_outline, size: 18)
-                          : const Icon(Icons.chevron_right),
-                      onTap: c.builtIn ? null : () => _open(context, c),
+              Builder(
+                builder: (context) {
+                  final all = ref.watch(categoriesOfTypeProvider(type));
+                  Widget tile(TransactionCategory c) => ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 2,
                     ),
-                ],
+                    leading: IconTile(icon: c.icon, color: c.color),
+                    title: Text(c.label),
+                    subtitle: c.builtIn ? const Text('Bawaan') : null,
+                    trailing: c.builtIn
+                        ? Icon(
+                            Icons.lock_outline_rounded,
+                            size: 18,
+                            color: context.palette.inkMuted,
+                          )
+                        : Icon(
+                            Icons.chevron_right_rounded,
+                            color: context.palette.inkMuted,
+                          ),
+                    onTap: c.builtIn ? null : () => _open(context, c),
+                  );
+                  Widget group(String label, List<TransactionCategory> cs) =>
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const SizedBox(height: 16),
+                          SectionLabel('$label · ${cs.length}'),
+                          Card(
+                            clipBehavior: Clip.antiAlias,
+                            child: Column(
+                              children: [
+                                for (final (i, c) in cs.indexed) ...[
+                                  if (i > 0)
+                                    const Divider(indent: 72, endIndent: 16),
+                                  tile(c),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                  final custom = [
+                    for (final c in all)
+                      if (!c.builtIn) c,
+                  ];
+                  return ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
+                    children: [
+                      if (custom.isNotEmpty) group('Kategori saya', custom),
+                      group('Bawaan', [
+                        for (final c in all)
+                          if (c.builtIn) c,
+                      ]),
+                    ],
+                  );
+                },
               ),
           ],
         ),
@@ -161,7 +207,6 @@ class _CategoryFormPageState extends ConsumerState<CategoryFormPage> {
   @override
   Widget build(BuildContext context) {
     final initial = widget.initial;
-    final textTheme = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(
         title: Text(initial == null ? 'Kategori Baru' : 'Ubah Kategori'),
@@ -196,29 +241,23 @@ class _CategoryFormPageState extends ConsumerState<CategoryFormPage> {
                 hintText: 'Mis. Arisan',
                 prefixIcon: Padding(
                   padding: const EdgeInsets.all(8),
-                  child: CircleAvatar(
-                    radius: 14,
-                    backgroundColor: _color,
-                    child: Icon(
-                      CategoryStyle.icons[_iconKey],
-                      size: 16,
-                      color: Colors.white,
-                    ),
+                  child: IconTile(
+                    icon: CategoryStyle.icons[_iconKey] ?? Icons.label,
+                    color: _color,
+                    size: 32,
                   ),
                 ),
               ),
               validator: _validateName,
             ),
             const SizedBox(height: 20),
-            Text('Warna', style: textTheme.titleSmall),
-            const SizedBox(height: 8),
+            const SectionLabel('Warna'),
             ColorPicker(
               selected: _color,
               onChanged: (c) => setState(() => _color = c),
             ),
             const SizedBox(height: 20),
-            Text('Ikon', style: textTheme.titleSmall),
-            const SizedBox(height: 8),
+            const SectionLabel('Ikon'),
             IconPicker(
               selected: _iconKey,
               color: _color,

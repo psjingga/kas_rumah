@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/app_palette.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/warm_widgets.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../domain/entities/transaction.dart';
 import '../providers/category_providers.dart';
@@ -33,21 +36,28 @@ class TypeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SegmentedButton<TransactionType>(
-      segments: const [
-        ButtonSegment(
-          value: TransactionType.expense,
-          label: Text('Pengeluaran'),
-          icon: Icon(Icons.north_east),
+    return SizedBox(
+      width: double.infinity,
+      child: SegmentedButton<TransactionType>(
+        showSelectedIcon: false,
+        style: const ButtonStyle(
+          minimumSize: WidgetStatePropertyAll(Size.fromHeight(46)),
         ),
-        ButtonSegment(
-          value: TransactionType.income,
-          label: Text('Pemasukan'),
-          icon: Icon(Icons.south_west),
-        ),
-      ],
-      selected: {value},
-      onSelectionChanged: (s) => onChanged(s.first),
+        segments: const [
+          ButtonSegment(
+            value: TransactionType.expense,
+            label: Text('Pengeluaran'),
+            icon: Icon(Icons.trending_down_rounded),
+          ),
+          ButtonSegment(
+            value: TransactionType.income,
+            label: Text('Pemasukan'),
+            icon: Icon(Icons.trending_up_rounded),
+          ),
+        ],
+        selected: {value},
+        onSelectionChanged: (s) => onChanged(s.first),
+      ),
     );
   }
 }
@@ -192,6 +202,7 @@ class QuickAmountChips extends StatelessWidget {
     return Wrap(
       spacing: 8,
       runSpacing: 4,
+      alignment: WrapAlignment.center,
       children: [
         for (final v in _values)
           ActionChip(
@@ -201,6 +212,7 @@ class QuickAmountChips extends StatelessWidget {
           ),
         ActionChip(
           avatar: const Icon(Icons.backspace_outlined, size: 16),
+          backgroundColor: context.palette.surface,
           label: const Text('Hapus'),
           visualDensity: VisualDensity.compact,
           onPressed: controller.clear,
@@ -217,14 +229,56 @@ class AmountField extends StatelessWidget {
     required this.controller,
     this.label = 'Nominal',
     this.helperText,
+    this.large = false,
   });
 
   final TextEditingController controller;
   final String label;
   final String? helperText;
 
+  /// Tampilan besar di tengah (form transaksi).
+  final bool large;
+
   @override
   Widget build(BuildContext context) {
+    if (large) {
+      final p = context.palette;
+      const big = TextStyle(
+        fontSize: 32,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -.5,
+        fontFeatures: [FontFeature.tabularFigures()],
+      );
+      return TextFormField(
+        controller: controller,
+        keyboardType: TextInputType.number,
+        inputFormatters: const [ThousandsInputFormatter()],
+        textAlign: TextAlign.center,
+        style: big.copyWith(color: p.ink),
+        decoration: InputDecoration(
+          labelText: label,
+          floatingLabelAlignment: FloatingLabelAlignment.center,
+          floatingLabelBehavior: FloatingLabelBehavior.always,
+          labelStyle: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: p.inkMuted,
+          ),
+          helperText: helperText,
+          hintText: '0',
+          hintStyle: big.copyWith(color: p.border),
+          prefixText: 'Rp ',
+          prefixStyle: big.copyWith(fontSize: 20, color: p.inkMuted),
+          filled: false,
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+          errorBorder: InputBorder.none,
+          focusedErrorBorder: InputBorder.none,
+        ),
+        validator: FormValidators.amount,
+      );
+    }
     return TextFormField(
       controller: controller,
       keyboardType: TextInputType.number,
@@ -285,6 +339,88 @@ class CategoryField extends ConsumerWidget {
   }
 }
 
+/// Pilihan kategori berupa grid ikon pastel (4 kolom); yang terpilih diberi
+/// cincin madu.
+class CategoryGrid extends ConsumerWidget {
+  const CategoryGrid({
+    super.key,
+    required this.type,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final TransactionType type;
+  final TransactionCategory value;
+  final ValueChanged<TransactionCategory> onChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final options = ref.watch(categoriesOfTypeProvider(type));
+    final p = context.palette;
+    final items = [
+      // Kategori yang sudah dihapus tetap ditampilkan untuk data lama.
+      if (!options.contains(value) && value.type == type) value,
+      ...options,
+    ];
+    return LayoutBuilder(
+      builder: (context, box) {
+        final width = (box.maxWidth - 3 * 8) / 4;
+        return Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final c in items)
+              Semantics(
+                selected: c == value,
+                button: true,
+                child: InkWell(
+                  onTap: () => onChanged(c),
+                  borderRadius: BorderRadius.circular(AppRadius.box),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    width: width,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 10,
+                      horizontal: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: c == value ? p.primarySoft : Colors.transparent,
+                      borderRadius: BorderRadius.circular(AppRadius.box),
+                      border: Border.all(
+                        color: c == value ? p.primary : Colors.transparent,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        IconTile(icon: c.icon, color: c.color, size: 42),
+                        const SizedBox(height: 6),
+                        Text(
+                          c.label,
+                          maxLines: 2,
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            height: 1.2,
+                            fontWeight: c == value
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                            color: p.ink,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 /// Tombol simpan selebar layar dengan indikator loading.
 class SaveButton extends StatelessWidget {
   const SaveButton({super.key, required this.saving, required this.onPressed});
@@ -301,7 +437,7 @@ class SaveButton extends StatelessWidget {
               dimension: 18,
               child: CircularProgressIndicator(strokeWidth: 2),
             )
-          : const Icon(Icons.check),
+          : const Icon(Icons.check_rounded),
       label: const Text('Simpan'),
       style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
     );

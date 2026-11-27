@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/money_colors.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../../core/widgets/warm_widgets.dart';
+import '../../../../core/theme/app_palette.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/insight_card.dart';
 import '../../../transactions/presentation/providers/transaction_providers.dart';
@@ -61,7 +63,7 @@ class _DebtsPageState extends ConsumerState<DebtsPage> {
         onPressed: () => Navigator.of(
           context,
         ).push(MaterialPageRoute<void>(builder: (_) => const DebtFormPage())),
-        icon: const Icon(Icons.add),
+        icon: const Icon(Icons.add_rounded),
         label: const Text('Catat'),
       ),
       body: ListView(
@@ -93,6 +95,10 @@ class _DebtsPageState extends ConsumerState<DebtsPage> {
           ),
           const SizedBox(height: 12),
           SegmentedButton<bool>(
+            showSelectedIcon: false,
+            style: const ButtonStyle(
+              minimumSize: WidgetStatePropertyAll(Size.fromHeight(44)),
+            ),
             segments: const [
               ButtonSegment(value: false, label: Text('Belum lunas')),
               ButtonSegment(value: true, label: Text('Lunas')),
@@ -117,7 +123,7 @@ class _DebtsPageState extends ConsumerState<DebtsPage> {
           else
             for (final d in shown)
               Padding(
-                padding: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.only(bottom: 12),
                 child: DebtCard(
                   debt: d,
                   now: now,
@@ -151,19 +157,35 @@ class _TotalTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     return Card(
+      color: Color.alphaBlend(
+        color.withValues(alpha: .10),
+        context.palette.surface,
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: textTheme.labelLarge),
-            const SizedBox(height: 6),
+            Row(
+              children: [
+                IconTile(
+                  icon: color == context.expenseColor
+                      ? Icons.call_received_rounded
+                      : Icons.call_made_rounded,
+                  color: color,
+                  size: 32,
+                ),
+                const SizedBox(width: 8),
+                Expanded(child: Text(label, style: textTheme.titleSmall)),
+              ],
+            ),
+            const SizedBox(height: 10),
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
               child: Text(
                 Fmt.rupiah(value),
-                style: textTheme.titleMedium?.copyWith(
+                style: textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w800,
                   color: color,
                 ),
@@ -201,19 +223,18 @@ class DebtCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(18),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  CircleAvatar(
-                    backgroundColor: color.withValues(alpha: .15),
-                    child: Icon(
-                      d.iOwe ? Icons.call_received : Icons.call_made,
-                      color: color,
-                      size: 20,
-                    ),
+                  IconTile(
+                    icon: d.iOwe
+                        ? Icons.call_received_rounded
+                        : Icons.call_made_rounded,
+                    color: color,
+                    size: 44,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -237,7 +258,7 @@ class DebtCard extends StatelessWidget {
                     children: [
                       Text(
                         Fmt.rupiah(d.remaining),
-                        style: textTheme.titleSmall?.copyWith(
+                        style: textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w800,
                           color: d.isSettled ? null : color,
                         ),
@@ -247,17 +268,9 @@ class DebtCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: d.progress,
-                  minHeight: 6,
-                  color: color,
-                  backgroundColor: color.withValues(alpha: .15),
-                ),
-              ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 14),
+              SoftProgress(value: d.progress, color: color),
+              const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(
@@ -354,7 +367,6 @@ class DebtDetailPage extends ConsumerWidget {
     if (d == null) return const Scaffold();
     final now = ref.read(clockProvider)();
     final wallet = ref.watch(walletLookupProvider)[d.walletId];
-    final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -375,75 +387,106 @@ class DebtDetailPage extends ConsumerWidget {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
         children: [
           DebtCard(debt: d, now: now),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Card(
+            clipBehavior: Clip.antiAlias,
             child: Column(
               children: [
                 ListTile(
-                  dense: true,
-                  leading: const Icon(Icons.event_outlined),
+                  leading: IconTile(
+                    icon: Icons.event_rounded,
+                    color: context.palette.info,
+                    size: 36,
+                  ),
                   title: Text('${d.direction.personLabel} ${d.person}'),
                   subtitle: Text('Tanggal pinjam ${Fmt.date(d.date)}'),
                 ),
-                if (wallet != null)
+                if (wallet != null) ...[
+                  const Divider(indent: 68, endIndent: 16),
                   ListTile(
-                    dense: true,
-                    leading: Icon(wallet.type.icon, color: wallet.color),
+                    leading: IconTile(
+                      icon: wallet.type.icon,
+                      color: wallet.color,
+                      size: 36,
+                    ),
                     title: Text(
                       d.iOwe
                           ? 'Uang masuk ke ${wallet.name}'
                           : 'Uang keluar dari ${wallet.name}',
                     ),
                   ),
-                if (d.note.isNotEmpty)
+                ],
+                if (d.note.isNotEmpty) ...[
+                  const Divider(indent: 68, endIndent: 16),
                   ListTile(
-                    dense: true,
-                    leading: const Icon(Icons.sticky_note_2_outlined),
+                    leading: IconTile(
+                      icon: Icons.sticky_note_2_rounded,
+                      color: context.palette.inkMuted,
+                      size: 36,
+                    ),
                     title: Text(d.note),
                   ),
+                ],
               ],
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 14),
           if (!d.isSettled)
             FilledButton.icon(
               onPressed: () => _pay(context, ref, d),
-              icon: const Icon(Icons.payments_outlined),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(52),
+              ),
+              icon: const Icon(Icons.payments_rounded),
               label: Text(d.iOwe ? 'Catat pembayaran' : 'Catat penerimaan'),
             ),
-          const SizedBox(height: 20),
-          Text('Riwayat pembayaran', style: textTheme.titleMedium),
+          const SizedBox(height: 24),
+          const SectionLabel('Riwayat pembayaran'),
           if (d.payments.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 24),
               child: Text('Belum ada pembayaran.', textAlign: TextAlign.center),
-            ),
-          for (final p in d.payments)
-            Dismissible(
-              key: ValueKey(p.id),
-              direction: DismissDirection.endToStart,
-              background: Container(
-                alignment: Alignment.centerRight,
-                padding: const EdgeInsets.only(right: 20),
-                color: Theme.of(context).colorScheme.errorContainer,
-                child: const Icon(Icons.delete_outline),
-              ),
-              onDismissed: (_) =>
-                  ref.read(debtsProvider.notifier).removePayment(d.id, p.id),
-              child: ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(
-                  Icons.check_circle_outline,
-                  color: debtColor(context, d),
-                ),
-                title: Text(Fmt.rupiah(p.amount)),
-                subtitle: Text(
-                  '${Fmt.date(p.date)}'
-                  '${p.transferId == null ? '' : ' · tercatat di dompet'}',
-                ),
+            )
+          else
+            Card(
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: [
+                  for (final (i, p) in d.payments.indexed) ...[
+                    if (i > 0) const Divider(indent: 68, endIndent: 16),
+                    Dismissible(
+                      key: ValueKey(p.id),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 20),
+                        color: Theme.of(context).colorScheme.errorContainer,
+                        child: const Icon(Icons.delete_outline_rounded),
+                      ),
+                      onDismissed: (_) => ref
+                          .read(debtsProvider.notifier)
+                          .removePayment(d.id, p.id),
+                      child: ListTile(
+                        leading: IconTile(
+                          icon: Icons.check_circle_rounded,
+                          color: debtColor(context, d),
+                          size: 36,
+                        ),
+                        title: Text(
+                          Fmt.rupiah(p.amount),
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                        subtitle: Text(
+                          '${Fmt.date(p.date)}'
+                          '${p.transferId == null ? '' : ' · tercatat di dompet'}',
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
         ],

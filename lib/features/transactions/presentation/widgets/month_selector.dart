@@ -11,6 +11,7 @@ class MonthSelector extends StatelessWidget {
     required this.onPrevious,
     required this.onNext,
     required this.onThisMonth,
+    this.foreground,
   });
 
   final DateTime month;
@@ -19,6 +20,9 @@ class MonthSelector extends StatelessWidget {
   final VoidCallback onNext;
   final VoidCallback onThisMonth;
 
+  /// Warna teks/ikon khusus (mis. putih di atas hero); bawaan = tema.
+  final Color? foreground;
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -26,7 +30,8 @@ class MonthSelector extends StatelessWidget {
         IconButton(
           tooltip: 'Bulan sebelumnya',
           onPressed: onPrevious,
-          icon: const Icon(Icons.chevron_left),
+          color: foreground,
+          icon: const Icon(Icons.chevron_left_rounded),
         ),
         Expanded(
           child: Column(
@@ -34,13 +39,16 @@ class MonthSelector extends StatelessWidget {
               Text(
                 Fmt.month(month),
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(color: foreground),
               ),
               if (!isThisMonth)
                 TextButton(
                   onPressed: onThisMonth,
                   style: TextButton.styleFrom(
                     visualDensity: VisualDensity.compact,
+                    foregroundColor: foreground,
                   ),
                   child: const Text('Ke bulan ini'),
                 ),
@@ -50,7 +58,8 @@ class MonthSelector extends StatelessWidget {
         IconButton(
           tooltip: 'Bulan berikutnya',
           onPressed: onNext,
-          icon: const Icon(Icons.chevron_right),
+          color: foreground,
+          icon: const Icon(Icons.chevron_right_rounded),
         ),
       ],
     );

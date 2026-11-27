@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_palette.dart';
+
 /// Keypad angka + titik indikator PIN.
 ///
 /// [onCompleted] dipanggil otomatis saat panjang mencapai [length]; bila
@@ -53,18 +55,31 @@ class PinPadState extends State<PinPad> {
     final scheme = Theme.of(context).colorScheme;
     final dots = widget.length ?? _pin.length.clamp(widget.minLength, _max);
 
-    Widget key(String label, {VoidCallback? onTap, Widget? child}) => SizedBox(
-      width: 76,
-      height: 64,
-      child: TextButton(
-        onPressed: onTap,
-        style: TextButton.styleFrom(shape: const CircleBorder()),
-        child:
-            child ??
-            Text(
-              label,
-              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w500),
-            ),
+    final p = context.palette;
+    // Tombol angka bulat putih; tombol ikon (sidik jari/hapus) tanpa latar.
+    Widget key(String label, {VoidCallback? onTap, Widget? child}) => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      child: SizedBox.square(
+        dimension: 72,
+        child: TextButton(
+          onPressed: onTap,
+          style: TextButton.styleFrom(
+            shape: const CircleBorder(),
+            foregroundColor: p.ink,
+            backgroundColor: child == null ? p.surface : Colors.transparent,
+            elevation: 0,
+            side: child == null ? BorderSide(color: p.border) : null,
+          ),
+          child:
+              child ??
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+        ),
       ),
     );
 
@@ -77,14 +92,18 @@ class PinPadState extends State<PinPad> {
             mainAxisSize: MainAxisSize.min,
             children: [
               for (var i = 0; i < dots; i++)
-                Container(
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
                   margin: const EdgeInsets.symmetric(horizontal: 8),
-                  width: 14,
-                  height: 14,
+                  width: 16,
+                  height: 16,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: i < _pin.length ? scheme.primary : null,
-                    border: Border.all(color: scheme.primary, width: 2),
+                    border: Border.all(
+                      color: i < _pin.length ? scheme.primary : p.border,
+                      width: 2,
+                    ),
                   ),
                 ),
             ],
@@ -116,13 +135,14 @@ class PinPadState extends State<PinPad> {
                 '',
                 onTap: bio,
                 child: Icon(
-                  Icons.fingerprint,
-                  size: 30,
+                  Icons.fingerprint_rounded,
+                  size: 34,
+                  color: scheme.primary,
                   semanticLabel: 'Sidik jari',
                 ),
               )
             else
-              const SizedBox(width: 76),
+              const SizedBox(width: 92),
             key('0', onTap: () => _tap('0')),
             key(
               '',
@@ -132,7 +152,7 @@ class PinPadState extends State<PinPad> {
                       () => _pin = _pin.substring(0, _pin.length - 1),
                     ),
               child: const Icon(
-                Icons.backspace_outlined,
+                Icons.backspace_rounded,
                 semanticLabel: 'Hapus',
               ),
             ),
@@ -141,6 +161,7 @@ class PinPadState extends State<PinPad> {
         if (widget.length == null) ...[
           const SizedBox(height: 12),
           FilledButton(
+            style: FilledButton.styleFrom(minimumSize: const Size(200, 52)),
             onPressed: _pin.length >= widget.minLength
                 ? () {
                     final pin = _pin;

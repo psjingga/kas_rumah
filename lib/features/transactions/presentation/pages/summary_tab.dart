@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/formatters.dart';
+import '../../../../core/widgets/warm_widgets.dart';
 import '../../../budgets/presentation/widgets/budget_overview_card.dart';
 import '../../../goals/presentation/widgets/goals_overview_card.dart';
 import '../../domain/entities/recurring_transaction.dart';
@@ -76,17 +77,17 @@ class SummaryTab extends ConsumerWidget {
       onNext: monthNotifier.next,
       child: ListView(
         // Ruang bawah agar item terakhir tidak tertutup FAB.
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
+        padding: const EdgeInsets.only(bottom: 96),
         children: [
-          MonthSelector(
-            month: month,
-            isThisMonth: monthNotifier.isThisMonth,
-            onPrevious: monthNotifier.previous,
-            onNext: monthNotifier.next,
-            onThisMonth: monthNotifier.goToThisMonth,
-          ),
-          const SizedBox(height: 4),
           BalanceCard(
+            header: MonthSelector(
+              month: month,
+              isThisMonth: monthNotifier.isThisMonth,
+              onPrevious: monthNotifier.previous,
+              onNext: monthNotifier.next,
+              onThisMonth: monthNotifier.goToThisMonth,
+              foreground: Colors.white,
+            ),
             summary: summary,
             previous: previous,
             // Hanya untuk bulan berjalan; bulan lain tidak relevan.
@@ -96,53 +97,63 @@ class SummaryTab extends ConsumerWidget {
                       .fold<double>(0, (s, t) => s + t.signedAmount)
                 : null,
           ),
-          const SizedBox(height: 12),
-          const WalletsSummaryCard(),
-          const SizedBox(height: 12),
-          // Status anggaran & tabungan; ketuk untuk membuka tabnya.
-          const IntrinsicHeight(
-            child: Row(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(child: BudgetOverviewCard()),
-                SizedBox(width: 12),
-                Expanded(child: GoalsOverviewCard()),
+                if (pending.isNotEmpty) ...[
+                  const SectionLabel('Perlu perhatian'),
+                  RecurringDueCard(
+                    items: pending,
+                    month: month,
+                    onRecord: (o) => _record(context, ref, o),
+                    onEdit: (o) => openTransactionForm(
+                      context,
+                      month: month,
+                      recurring: o.recurring,
+                      occurrenceDate: o.date,
+                    ),
+                    onRecordAll: () => _recordAll(context, ref, pending),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+                // Status anggaran & tabungan; ketuk untuk membuka tabnya.
+                const IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(child: BudgetOverviewCard()),
+                      SizedBox(width: 14),
+                      Expanded(child: GoalsOverviewCard()),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const WalletsSummaryCard(),
+                const DebtsOverviewCard(),
+                const SizedBox(height: 14),
+                IncomeExpenseChart(summary: summary),
+                if (summary.expenseByCategory.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  CategoryBreakdownCard(summary: summary, previous: previous),
+                ],
+                const SizedBox(height: 14),
+                MonthlyTrendChart(
+                  trend: ref.watch(monthlyTrendProvider),
+                  selectedMonth: month,
+                  onSelectMonth: monthNotifier.select,
+                  action: TextButton.icon(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const ReportsPage(),
+                      ),
+                    ),
+                    icon: const Icon(Icons.insights_rounded, size: 18),
+                    label: const Text('Laporan'),
+                  ),
+                ),
               ],
-            ),
-          ),
-          const DebtsOverviewCard(),
-          if (pending.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            RecurringDueCard(
-              items: pending,
-              month: month,
-              onRecord: (o) => _record(context, ref, o),
-              onEdit: (o) => openTransactionForm(
-                context,
-                month: month,
-                recurring: o.recurring,
-                occurrenceDate: o.date,
-              ),
-              onRecordAll: () => _recordAll(context, ref, pending),
-            ),
-          ],
-          const SizedBox(height: 12),
-          IncomeExpenseChart(summary: summary),
-          if (summary.expenseByCategory.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            CategoryBreakdownCard(summary: summary, previous: previous),
-          ],
-          const SizedBox(height: 12),
-          MonthlyTrendChart(
-            trend: ref.watch(monthlyTrendProvider),
-            selectedMonth: month,
-            onSelectMonth: monthNotifier.select,
-            action: TextButton.icon(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const ReportsPage()),
-              ),
-              icon: const Icon(Icons.insights_outlined, size: 18),
-              label: const Text('Laporan'),
             ),
           ),
         ],

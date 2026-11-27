@@ -5,6 +5,7 @@ import '../../../wallets/presentation/providers/wallet_providers.dart';
 import '../../../wallets/domain/wallet.dart';
 import '../../../../core/theme/money_colors.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../../core/widgets/warm_widgets.dart';
 import '../../domain/entities/transaction.dart';
 
 /// Satu baris transaksi. Ketuk untuk mengubah, geser ke kiri untuk menghapus.
@@ -42,20 +43,21 @@ class TransactionTile extends ConsumerWidget {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
         color: scheme.errorContainer,
-        child: Icon(Icons.delete_outline, color: scheme.onErrorContainer),
+        child: Icon(
+          Icons.delete_outline_rounded,
+          color: scheme.onErrorContainer,
+        ),
       ),
       child: ListTile(
         onTap: onTap,
-        leading: CircleAvatar(
-          backgroundColor: t.category.color.withValues(alpha: .15),
-          child: Icon(t.category.icon, color: t.category.color, size: 20),
-        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+        leading: IconTile(icon: t.category.icon, color: t.category.color),
         title: Text(t.title, maxLines: 1, overflow: TextOverflow.ellipsis),
         subtitle: Row(
           children: [
             // Penanda transaksi hasil catatan transaksi rutin.
             if (t.isRecurring) ...[
-              Icon(Icons.event_repeat, size: 14, color: scheme.outline),
+              Icon(Icons.event_repeat_rounded, size: 14, color: scheme.outline),
               const SizedBox(width: 4),
             ],
             // Penanda ada catatan / foto struk.
@@ -86,7 +88,12 @@ class TransactionTile extends ConsumerWidget {
         ),
         trailing: Text(
           '${t.isIncome ? '+' : '−'} ${Fmt.rupiah(t.amount)}',
-          style: TextStyle(color: amountColor, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: amountColor,
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
         ),
       ),
     );

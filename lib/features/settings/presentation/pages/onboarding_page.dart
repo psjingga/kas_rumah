@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/app_palette.dart';
+import '../../../../core/widgets/warm_widgets.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/month.dart';
 import '../../../transactions/domain/entities/transaction.dart';
@@ -134,13 +136,13 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 250),
                       margin: const EdgeInsets.only(right: 6),
-                      width: i == _step ? 24 : 8,
-                      height: 8,
+                      width: i == _step ? 32 : 14,
+                      height: 6,
                       decoration: BoxDecoration(
                         color: i <= _step
                             ? scheme.primary
                             : scheme.outlineVariant,
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(3),
                       ),
                     ),
                   const Spacer(),
@@ -185,12 +187,57 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
             children: [
-              CircleAvatar(
-                radius: 32,
-                backgroundColor: scheme.primaryContainer,
-                child: Icon(icon, size: 32, color: scheme.onPrimaryContainer),
+              // Ilustrasi: lingkaran lembut + kotak ikon bergradasi madu.
+              SizedBox(
+                height: 168,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      width: 160,
+                      height: 160,
+                      decoration: BoxDecoration(
+                        color: context.palette.primarySoft,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    Positioned(
+                      left: 40,
+                      bottom: 6,
+                      child: Container(
+                        width: 70,
+                        height: 70,
+                        decoration: BoxDecoration(
+                          color: context.palette.primary.withValues(alpha: .18),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                    Transform.rotate(
+                      angle: -.1,
+                      child: Container(
+                        width: 92,
+                        height: 92,
+                        decoration: BoxDecoration(
+                          gradient: context.palette.heroGradient,
+                          borderRadius: BorderRadius.circular(26),
+                          boxShadow: [
+                            BoxShadow(
+                              color: context.palette.primary.withValues(
+                                alpha: .3,
+                              ),
+                              blurRadius: 18,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Icon(icon, size: 46, color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               Text(
                 title,
                 style: textTheme.headlineSmall?.copyWith(
@@ -219,22 +266,22 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
   Widget _welcome(BuildContext context) => _stepLayout(
     context,
-    icon: Icons.home_outlined,
+    icon: Icons.home_rounded,
     title: 'Selamat datang di Kas Rumah',
     subtitle:
         'Catatan keuangan keluarga yang sederhana. Semua data '
         'tersimpan di HP ini, tanpa akun.',
     children: const [
       _Benefit(
-        icon: Icons.receipt_long_outlined,
+        icon: Icons.receipt_long_rounded,
         text: 'Catat pemasukan & pengeluaran, lihat sisa saldo tiap bulan',
       ),
       _Benefit(
-        icon: Icons.event_repeat,
+        icon: Icons.event_repeat_rounded,
         text: 'Tagihan rutin diingatkan sebelum jatuh tempo',
       ),
       _Benefit(
-        icon: Icons.pie_chart_outline,
+        icon: Icons.pie_chart_rounded,
         text: 'Anggaran per kategori & target tabungan',
       ),
     ],
@@ -243,7 +290,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
   Widget _incomeStep(BuildContext context) => _stepLayout(
     context,
-    icon: Icons.work_outline,
+    icon: Icons.work_rounded,
     title: 'Pemasukan rutin',
     subtitle:
         'Berapa gaji atau pemasukan tetap setiap bulan? Boleh '
@@ -361,15 +408,23 @@ class _Benefit extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        children: [
-          Icon(icon, color: Theme.of(context).colorScheme.primary),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Text(text, style: Theme.of(context).textTheme.bodyLarge),
-          ),
-        ],
+      padding: const EdgeInsets.only(bottom: 10),
+      child: WarmCard(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            IconTile(icon: icon, color: context.palette.primary),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                text,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
